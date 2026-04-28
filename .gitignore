@@ -1,0 +1,18 @@
+*.log
+logs/
+*.swp
+
+# --- Node / Dependencies ---
+# Ignore node_modules for the server and any other JS folder
+node_modules/
+dist/
+server/dist/
+build/
+
+# --- Environment Secrets (CRITICAL) ---
+# Never commit your database passwords or JWT secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

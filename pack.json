@@ -1,0 +1,12 @@
+{
+  "name": "lingolink-backend",
+  "version": "1.0.0",
+  "description": "Backend for the lingolink multilingual chat application.",
+  "license": "ISC",
+  "author": "kudy",
+  "type": "commonjs",
+  "main": "app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
