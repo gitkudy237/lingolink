@@ -3,11 +3,23 @@ import express, { NextFunction, Request, Response } from "express";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        preferredLanguage?: string;
+      };
+    }
+  }
+}
+
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json());
+app.use(express.urlencoded());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

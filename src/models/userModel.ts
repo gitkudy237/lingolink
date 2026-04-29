@@ -1,6 +1,6 @@
 import prisma from "../lib/prisma";
 
-export interface UserCreateInput {
+export interface UserCreateRequest {
   email: string;
   phone: string;
   username: string;
@@ -8,7 +8,7 @@ export interface UserCreateInput {
   preferredLanguage?: string;
 }
 
-export async function createUser(data: UserCreateInput) {
+export async function createUser(data: UserCreateRequest) {
   return await prisma.user.create({
     data: {
       email: data.email,
