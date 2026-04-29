@@ -6,9 +6,9 @@ const router = Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, username, phone, language, otherLanguage, acceptTerms } = req.body;
-    const user = await registerUser({ email, password, username, phone });
-    res.status(201).json({ user });
+    const { email, password, username, phone, preferredLanguage } = req.body;
+    const { user, token } = await registerUser({ email, password, username, phone, preferredLanguage });
+    res.status(201).json({ user, token });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

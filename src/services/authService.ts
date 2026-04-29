@@ -6,6 +6,7 @@ import {
   findUserByEmail,
   findUserByUsername,
   findUserByPhone,
+  findUserById,
 } from "../models/userModel";
 
 const saltRounds = 12;
@@ -68,6 +69,11 @@ export async function loginUser(identifier: string, password: string) {
     throw new Error("Invalid credentials");
   }
 
+  const safeUser = await findUserById(user.id);
+  if (!safeUser) {
+    throw new Error("User not found");
+  }
+
   // Generate token
   const token = signJwt({
     id: user.id,
@@ -75,5 +81,5 @@ export async function loginUser(identifier: string, password: string) {
     preferredLanguage: user.preferredLanguage,
   });
 
-  return { user, token };
+  return { user: safeUser, token };
 }

@@ -17,6 +17,15 @@ export async function createUser(data: UserCreateRequest) {
       passwordHash: data.passwordHash,
       preferredLanguage: data.preferredLanguage || "en",
     },
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      preferredLanguage: true,
+      profileImageUrl: true,
+      createdAt: true,
+    },
   });
 }
 
