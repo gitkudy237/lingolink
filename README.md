@@ -34,6 +34,13 @@ A multilingual chat backend prototype using Node.js, Express, Socket.io, Postgre
 - `GET /api/auth/me`
 - `GET /api/users/me`
 - `PUT /api/users/me`
+- `GET /api/conversations`
+- `POST /api/conversations`
+- `GET /api/conversations/:id`
+- `PUT /api/conversations/:id`
+- `POST /api/conversations/:conversationId/messages`
+- `GET /api/conversations/:conversationId/messages`
+- `POST /api/conversations/:conversationId/messages/read`
 
 ## Notes
 

@@ -2,6 +2,8 @@ import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import conversationRoutes from "./routes/conversationRoutes";
+import messageRoutes from "./routes/messageRoutes";
 
 declare global {
   namespace Express {
@@ -23,6 +25,8 @@ app.use(express.urlencoded());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/conversations/:conversationId/messages", messageRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ status: "ok", service: "Lingolink backend" });
