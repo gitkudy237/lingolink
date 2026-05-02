@@ -42,8 +42,34 @@ A multilingual chat backend prototype using Node.js, Express, Socket.io, Postgre
 - `GET /api/conversations/:conversationId/messages`
 - `POST /api/conversations/:conversationId/messages/read`
 
+## Socket.io Events
+
+### Connection
+- Requires JWT token in `socket.handshake.auth.token`
+
+### Client → Server Events
+- `join_conversation` - Join a conversation room (payload: `conversationId`)
+- `leave_conversation` - Leave a conversation room (payload: `conversationId`)
+- `send_message` - Send a message (payload: `{ conversationId, type, originalText, transcriptionText?, metadata? }`)
+- `typing` - Indicate user is typing (payload: `{ conversationId }`)
+- `stop_typing` - Indicate user stopped typing (payload: `{ conversationId }`)
+- `message_read` - Mark a message as read (payload: `{ conversationId, messageId }`)
+
+### Server → Client Events
+- `joined_conversation` - Joined conversation (payload: `{ conversationId }`)
+- `user_joined` - Another user joined (payload: `{ userId, email }`)
+- `user_left` - Another user left (payload: `{ userId }`)
+- `message` - New message received (payload: full message object)
+- `user_typing` - Another user is typing (payload: `{ userId, email }`)
+- `user_stopped_typing` - Another user stopped typing (payload: `{ userId }`)
+- `message_read_receipt` - Message marked read (payload: `{ conversationId, userId, messageId }`)
+- `unread_counts_updated` - Unread counts changed (payload: `{ conversationId, unreadCounts: Record<userId, count> }`)
+- `error` - Error occurred (payload: `{ message }`)
+
 ## Notes
 
 - Prisma is configured for PostgreSQL.
+- Socket.io requires JWT authentication via token in handshake.
 - Run `npm run prisma:generate` after changing `prisma/schema.prisma`.
 - Run `npm run prisma:migrate` to apply schema changes.
+- CORS configuration for Socket.io is controlled by `CORS_ORIGIN` environment variable.
