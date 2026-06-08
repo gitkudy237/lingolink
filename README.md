@@ -29,47 +29,127 @@ A multilingual chat backend prototype using Node.js, Express, Socket.io, Postgre
 
 ## API endpoints
 
+### Authentication
+
 - `POST /api/auth/register`
+   - Request body:
+      - `email` (string, required)
+      - `password` (string, required)
+      - `username` (string, required)
+      - `phone` (string, required)
+      - `preferredLanguage` (string, optional)
+   - Response: `201 Created`
+      - `{ user, token }`
+   - Errors: `400 Bad Request` for validation or duplicate email/phone/username.
+
 - `POST /api/auth/login`
+   - Request body:
+      - `email` (string, required) // this value may be either the user's email or phone number
+      - `password` (string, required)
+   - Response: `200 OK`
+      - `{ user, token }`
+   - Errors: `401 Unauthorized` for invalid credentials.
+
 - `GET /api/auth/me`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Response: `200 OK`
+      - `{ user }`
+   - Errors: `401 Unauthorized` if the token is missing or invalid.
+
+### Users
+
 - `GET /api/users/me`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Response: `200 OK`
+      - `{ user }`
+   - Errors: `401 Unauthorized` if unauthenticated, `404 Not Found` if the user no longer exists.
+
 - `PUT /api/users/me`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Request body:
+      - `username` (string, optional)
+      - `preferredLanguage` (string, optional)
+   - Response: `200 OK`
+      - `{ user }`
+   - Errors: `400 Bad Request` when no update fields are provided.
+
+### Conversations
+
 - `GET /api/conversations`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Response: `200 OK`
+      - `{ conversations }`
+   - Errors: `401 Unauthorized` when unauthenticated.
+
 - `POST /api/conversations`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Request body for a direct conversation:
+      - `type`: `direct`
+      - `otherUserId`: string
+   - Request body for a group conversation:
+      - `type`: `group`
+      - `title`: string
+      - `participantIds`: string[] (optional)
+   - Response: `201 Created`
+      - `{ conversation }`
+   - Errors: `400 Bad Request` for invalid type, missing fields, or invalid participants.
+
 - `GET /api/conversations/:id`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Response: `200 OK`
+      - `{ conversation }`
+   - Errors: `400 Bad Request` for invalid ID or access denied.
+
 - `PUT /api/conversations/:id`
-- `POST /api/conversations/:conversationId/messages`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Request body:
+      - `title` (string, optional)
+      - `avatarUrl` (string, optional)
+      - `participantIds` (string[], optional) // only valid for group conversations
+   - Response: `200 OK`
+      - `{ conversation }`
+   - Errors: `400 Bad Request` when modifying a direct conversation with `participantIds`, invalid request data, or access denied.
+
+### Messages
+
 - `GET /api/conversations/:conversationId/messages`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Query parameters:
+      - `limit` (number, optional, default `50`)
+   - Response: `200 OK`
+      - `{ messages }`
+   - Errors: `400 Bad Request` for invalid conversation access.
+
+- `POST /api/conversations/:conversationId/messages`
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Request body:
+      - `type` (string, required)
+      - `originalText` (string, required for `type: "text"`)
+      - `transcriptionText` (string, optional)
+      - `metadata` (object, optional)
+   - Response: `201 Created`
+      - `{ message }`
+   - Errors: `400 Bad Request` for missing required text fields or invalid access.
+
 - `POST /api/conversations/:conversationId/messages/read`
-
-## Socket.io Events
-
-### Connection
-- Requires JWT token in `socket.handshake.auth.token`
-
-### Client → Server Events
-- `join_conversation` - Join a conversation room (payload: `conversationId`)
-- `leave_conversation` - Leave a conversation room (payload: `conversationId`)
-- `send_message` - Send a message (payload: `{ conversationId, type, originalText, transcriptionText?, metadata? }`)
-- `typing` - Indicate user is typing (payload: `{ conversationId }`)
-- `stop_typing` - Indicate user stopped typing (payload: `{ conversationId }`)
-- `message_read` - Mark a message as read (payload: `{ conversationId, messageId }`)
-
-### Server → Client Events
-- `joined_conversation` - Joined conversation (payload: `{ conversationId }`)
-- `user_joined` - Another user joined (payload: `{ userId, email }`)
-- `user_left` - Another user left (payload: `{ userId }`)
-- `message` - New message received (payload: full message object)
-- `user_typing` - Another user is typing (payload: `{ userId, email }`)
-- `user_stopped_typing` - Another user stopped typing (payload: `{ userId }`)
-- `message_read_receipt` - Message marked read (payload: `{ conversationId, userId, messageId }`)
-- `unread_counts_updated` - Unread counts changed (payload: `{ conversationId, unreadCounts: Record<userId, count> }`)
-- `error` - Error occurred (payload: `{ message }`)
+   - Request headers:
+      - `Authorization: Bearer <token>`
+   - Response: `200 OK`
+      - `{ success: true }`
+   - Errors: `400 Bad Request` when access is invalid.
 
 ## Notes
 
+- All protected routes require a valid JWT token in the `Authorization` header.
 - Prisma is configured for PostgreSQL.
-- Socket.io requires JWT authentication via token in handshake.
 - Run `npm run prisma:generate` after changing `prisma/schema.prisma`.
 - Run `npm run prisma:migrate` to apply schema changes.
-- CORS configuration for Socket.io is controlled by `CORS_ORIGIN` environment variable.
