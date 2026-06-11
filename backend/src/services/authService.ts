@@ -1,3 +1,4 @@
+import type { AuthRegisterRequest } from "@lingolink/shared";
 import bcrypt from "bcrypt";
 import { signJwt } from "../utils/jwt";
 import {
@@ -11,22 +12,18 @@ import {
 
 const saltRounds = 12;
 
-export async function registerUser(payload: {
-  email: string;
-  phone: string;
-  username: string;
-  password: string;
-  preferredLanguage?: string;
-}) {
+export async function registerUser(payload: AuthRegisterRequest) {
   // Check for existing users
   const existingEmail = await findUserByEmail(payload.email);
   if (existingEmail) {
     throw new Error("Email is already registered");
   }
 
-  const existingPhone = await findUserByPhone(payload.phone);
-  if (existingPhone) {
-    throw new Error("Phone number is already registered");
+  if (payload.phone) {
+    const existingPhone = await findUserByPhone(payload.phone);
+    if (existingPhone) {
+      throw new Error("Phone number is already registered");
+    }
   }
 
   const existingUsername = await findUserByUsername(payload.username);
@@ -40,10 +37,10 @@ export async function registerUser(payload: {
   // Create user
   const user = await createUser({
     email: payload.email,
-    phone: payload.phone,
+    phone: payload.phone || "",
     username: payload.username,
     passwordHash,
-    preferredLanguage: payload.preferredLanguage,
+    preferredLanguage: payload.preferredLanguage || "en",
   });
 
   // Generate token

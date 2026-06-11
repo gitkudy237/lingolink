@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "workspaces": ["backend", "frontend", "shared"],
+  "scripts": {
+    "bootstrap": "npm install",
+    "dev:backend": "npm --workspace backend run dev",
+    "start:backend": "npm --workspace backend run start",
+    "dev:frontend": "npm --workspace frontend run start",
+    "lint:frontend": "npm --workspace frontend run lint"
+  }
+}
