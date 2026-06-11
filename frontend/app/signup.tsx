@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "./components/Modal";
+import { signup } from "../src/services/authService";
+import type { AuthRegisterRequest } from "@lingolink/shared";
 
 const languagesRow1 = [
   { name: "English", flag: "🇬🇧" },
@@ -132,39 +134,27 @@ export default function RegisterScreen() {
     }
 
     try {
-      await SecureStore.setItemAsync(
-        "user",
-        JSON.stringify({
-          username: form.username,
-          phone: form.phone,
-          email: form.email,
-          password: form.password,
-          country: selectedCountry,
-          language: selectedLang,
-          createdAt: new Date().toISOString(),
-        }),
-      );
-      showToast("Account created successfully!", "success");
+      const payload: AuthRegisterRequest = {
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        phone: form.phone,
+        preferredLanguage: selectedLang.name,
+      };
 
-      // also set currentUser so app treats user as logged in
-      await SecureStore.setItemAsync(
-        "currentUser",
-        JSON.stringify({
-          username: form.username,
-          phone: form.phone,
-          email: form.email,
-          password: form.password,
-          country: selectedCountry,
-          language: selectedLang,
-          createdAt: new Date().toISOString(),
-        }),
-      );
+      const { user, token } = await signup(payload);
+      await SecureStore.setItemAsync("currentUser", JSON.stringify(user));
+      await SecureStore.setItemAsync("authToken", token);
+      showToast("Account created successfully!", "success");
 
       router.replace("/chatList");
     } catch (error) {
       console.log("SAVE ERROR:", error);
 
-      showToast("Failed to save account", "error");
+      showToast(
+        (error as any)?.response?.data?.error || "Failed to create account",
+        "error",
+      );
     }
   };
 
