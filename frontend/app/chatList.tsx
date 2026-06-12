@@ -89,7 +89,7 @@ export default function ChatList() {
             const stored = await SecureStore.getItemAsync(`messages-${chat.id}`);
             if (!stored) return chat;
 
-            const messages = JSON.parse(stored) as Array<{ text: string; createdAt: string }>;
+            const messages = JSON.parse(stored) as { text: string; createdAt: string }[];
             if (!messages.length) return chat;
 
             const lastMessage = messages[messages.length - 1];
@@ -162,11 +162,18 @@ export default function ChatList() {
           <Text style={styles.logo}>🌐 LingoLink</Text>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={() => router.push("/settings" as any)}>
+            <TouchableOpacity onPress={() => router.push("/settings")}
+            >
               <Text style={styles.icon}>⋮</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {currentUser ? (
+          <Text style={styles.welcomeText} numberOfLines={1}>
+            Welcome, {currentUser.username}
+          </Text>
+        ) : null}
 
         {/* SEARCH */}
         <View style={styles.searchWrapper}>
@@ -211,18 +218,20 @@ export default function ChatList() {
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.8}
-        onPress={() => router.push("/newChat" as any)}
+        onPress={() => router.push("/newChat")}
       >
         <Text style={{ color: "#fff", fontSize: 24 }}>＋</Text>
       </TouchableOpacity>
 
       {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => router.push("/chats" as any)}>
+        <TouchableOpacity onPress={() => router.push("/chatList")}
+        >
           <Text style={styles.activeNav}>💬</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/contacts" as any)}>
+        <TouchableOpacity onPress={() => router.push("/contacts")}
+        >
           <Text style={styles.nav}>👥</Text>
         </TouchableOpacity>
 
@@ -251,6 +260,7 @@ const styles = StyleSheet.create({
   logo: { fontSize: 20, fontWeight: "700", color: "#0A8F5A" },
   headerIcons: { flexDirection: "row", gap: 15 },
   icon: { fontSize: 20 },
+  welcomeText: { color: "#555", marginTop: 6 },
 
   searchWrapper: {
     marginTop: 10,
