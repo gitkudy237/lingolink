@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Debug Backend (ts-node)",
+      "cwd": "${workspaceFolder}/backend",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/node",
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register/transpile-only",
+        "src/index.ts"
+      ],
+      "env": {
+        "NODE_OPTIONS": "--enable-source-maps"
+      },
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true
+    },
+    {
+      "type": "pwa-chrome",
+      "request": "launch",
+      "name": "Attach to Frontend (Expo Web)",
+      "url": "http://localhost:8082",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Full App",
+      "configurations": ["Debug Backend (ts-node)", "Attach to Frontend (Expo Web)"]
+    }
+  ]
+}

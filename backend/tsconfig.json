@@ -4,6 +4,7 @@
     "module": "Node16",
     "moduleResolution": "Node16",
     "rootDir": "../",
+    "sourceMap": true,
     "outDir": "./dist",
     "types": ["node"],
     "typeRoots": ["./src/types", "./node_modules/@types"]

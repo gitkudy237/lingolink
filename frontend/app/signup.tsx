@@ -183,11 +183,12 @@ export default function RegisterScreen() {
     }
 
     try {
+      const normalizedPhone = form.phone.trim().replace(/\D/g, "");
       const payload: AuthRegisterRequest = {
         username: form.username,
         email: form.email,
         password: form.password,
-        phone: form.phone,
+        phone: `${selectedCountry.code}${normalizedPhone}`,
         preferredLanguage: selectedLang.name,
       };
 

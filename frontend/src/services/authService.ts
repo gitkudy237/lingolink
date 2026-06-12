@@ -1,11 +1,11 @@
 import axios from "axios";
 import type { AuthLoginRequest, AuthRegisterRequest } from "@lingolink/shared";
 
-const API_BASE_URL = "http://localhost:4000/api/auth";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.43.142:4000/api";
 
 export const signup = async (data: AuthRegisterRequest) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/register`, data);
+    const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Server Error" };
@@ -14,7 +14,7 @@ export const signup = async (data: AuthRegisterRequest) => {
 
 export const login = async (data: AuthLoginRequest) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/login`, data);
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, data);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Server Error" };
