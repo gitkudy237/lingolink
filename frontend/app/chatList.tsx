@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import theme from "../src/theme";
 
 interface Chat {
   id: string;
@@ -159,12 +161,14 @@ export default function ChatList() {
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.logo}>🌐 LingoLink</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="globe-outline" size={24} color={theme.colors.primary} />
+            <Text style={styles.logo}>LingoLink</Text>
+          </View>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={() => router.push("/settings")}
-            >
-              <Text style={styles.icon}>⋮</Text>
+            <TouchableOpacity onPress={() => router.push("/settings")}>
+              <Ionicons name="ellipsis-vertical" size={24} color={theme.colors.muted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -225,76 +229,75 @@ export default function ChatList() {
 
       {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => router.push("/chatList")}
-        >
-          <Text style={styles.activeNav}>💬</Text>
+        <TouchableOpacity onPress={() => router.push("/chatList")}>
+          <Ionicons name="chatbubble" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/contacts")}
-        >
-          <Text style={styles.nav}>👥</Text>
+        <TouchableOpacity onPress={() => router.push("/contacts")}>
+          <Ionicons name="people-outline" size={24} color={theme.colors.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push("/calls" as any)}>
-          <Text style={styles.nav}>📞</Text>
+          <Ionicons name="call-outline" size={24} color={theme.colors.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push("/settings" as any)}>
-          <Text style={styles.nav}>⚙️</Text>
+          <Ionicons name="settings-outline" size={24} color={theme.colors.muted} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-// ✅ STYLES (UNCHANGED)
+// ✅ STYLES (THEMED)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F6F8" },
-  header: { padding: 16, marginTop: 50 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  header: { padding: theme.spacing.md, marginTop: 50 },
 
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  logo: { fontSize: 20, fontWeight: "700", color: "#0A8F5A" },
-  headerIcons: { flexDirection: "row", gap: 15 },
-  icon: { fontSize: 20 },
-  welcomeText: { color: "#555", marginTop: 6 },
+  logo: { fontSize: 20, fontWeight: "700", color: theme.colors.primary },
+  headerIcons: { flexDirection: "row", gap: theme.spacing.md },
+  welcomeText: { color: theme.colors.muted, marginTop: theme.spacing.sm },
 
   searchWrapper: {
-    marginTop: 10,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing.sm,
   },
 
   searchInput: {
     height: 40,
+    color: theme.colors.text,
   },
 
-  tabs: { flexDirection: "row", paddingHorizontal: 16 },
+  tabs: { flexDirection: "row", paddingHorizontal: theme.spacing.md },
 
   tab: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "#E0F2EC",
-    marginRight: 10,
+    backgroundColor: "rgba(15, 118, 110, 0.1)",
+    marginRight: theme.spacing.sm,
   },
 
-  activeTab: { backgroundColor: "#0A8F5A" },
+  activeTab: { backgroundColor: theme.colors.primary },
 
-  tabText: { color: "#0A8F5A" },
+  tabText: { color: theme.colors.primary },
   activeTabText: { color: "#fff" },
 
   card: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    marginBottom: 12,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.md,
   },
 
   avatar: { width: 50, height: 50, borderRadius: 25 },
@@ -302,23 +305,23 @@ const styles = StyleSheet.create({
   onlineDot: {
     width: 10,
     height: 10,
-    backgroundColor: "green",
+    backgroundColor: "#10b981",
     borderRadius: 5,
     position: "absolute",
     bottom: 2,
     right: 2,
   },
 
-  info: { marginLeft: 12 },
+  info: { marginLeft: theme.spacing.md },
 
-  name: { fontWeight: "600" },
-  message: { color: "#777" },
+  name: { fontWeight: "600", color: theme.colors.text },
+  message: { color: theme.colors.muted },
 
   time: { fontSize: 11, color: "#999" },
 
   unreadBadge: {
-    backgroundColor: "#0A8F5A",
-    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.sm,
     paddingHorizontal: 6,
     marginTop: 4,
   },
@@ -331,8 +334,8 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     bottom: 70,
-    right: 20,
-    backgroundColor: "#0A8F5A",
+    right: theme.spacing.lg,
+    backgroundColor: theme.colors.primary,
     width: 55,
     height: 55,
     borderRadius: 28,
@@ -343,10 +346,8 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row",
     justifyContent: "space-around",
-    padding: 12,
-    backgroundColor: "#fff",
+    alignItems: "center",
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
-
-  nav: { color: "#888" },
-  activeNav: { color: "#0A8F5A" },
 });

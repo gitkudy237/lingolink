@@ -1,13 +1,9 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Image,
-} from "react-native";
+import { StyleSheet, Text, View, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Button from "./components/Button";
+import theme from "../src/theme";
 
 const WelcomeScreen = () => {
   const router = useRouter();
@@ -38,19 +34,18 @@ const WelcomeScreen = () => {
       </Text>
 
       {/* Buttons */}
-      <TouchableOpacity
-        style={styles.primaryBtn}
-        onPress={() => router.push("/signup")}
-      >
-        <Text style={styles.primaryText}>Get Started →</Text>
-      </TouchableOpacity>
+      <View style={{ width: "100%" }}>
+        <Button title="Get Started →" onPress={() => router.push("/signup")} />
+      </View>
 
-      <TouchableOpacity
-        style={styles.secondaryBtn}
-        onPress={() => router.push("/login")}
-      >
-        <Text style={styles.secondaryText}>Log In</Text>
-      </TouchableOpacity>
+      <View style={{ width: "100%", marginTop: 10 }}>
+        <Button
+          title="Log In"
+          variant="secondary"
+          onPress={() => router.push("/login")}
+          style={{ borderWidth: 1, borderColor: theme.colors.primary }}
+        />
+      </View>
 
       {/* Terms */}
       <Text style={styles.terms}>

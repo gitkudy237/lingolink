@@ -1,11 +1,38 @@
 
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native";
+import theme from "../../src/theme";
 
-const Button = ({ title, onPress }: any) => {
+type Props = {
+  title: string;
+  onPress?: () => void;
+  variant?: "primary" | "secondary";
+  disabled?: boolean;
+  style?: ViewStyle;
+};
+
+const Button: React.FC<Props> = ({
+  title,
+  onPress,
+  variant = "primary",
+  disabled = false,
+  style,
+}) => {
+  const backgroundColor =
+    variant === "primary" ? theme.colors.primary : "transparent";
+  const textColor = variant === "primary" ? "#fff" : theme.colors.primary;
+
   return (
-    <TouchableOpacity style={styles.btn} onPress={onPress}>
-      <Text style={styles.text}>{title}</Text>
+    <TouchableOpacity
+      style={[
+        styles.btn,
+        { backgroundColor, opacity: disabled ? 0.6 : 1 },
+        style,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={[styles.text, { color: textColor }]}>{title}</Text>
     </TouchableOpacity>
   );
 };
@@ -14,10 +41,11 @@ export default Button;
 
 const styles = StyleSheet.create({
   btn: {
-    backgroundColor: "#0F766E",
-    padding: 14,
-    borderRadius: 10,
+    height: theme.sizes.buttonHeight,
+    borderRadius: theme.radii.md,
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.md,
   },
-  text: { color: "#fff", fontWeight: "bold" },
+  text: { fontWeight: "700", fontSize: 16 },
 });

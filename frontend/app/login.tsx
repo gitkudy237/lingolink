@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Eye, EyeOff, Globe, Lock, Mail } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { login } from "../src/services/authService";
@@ -9,11 +9,13 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Input from "./components/Input";
+import Button from "./components/Button";
+import theme from "../src/theme";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -71,8 +73,8 @@ const LoginScreen = () => {
         style={styles.inner}
       >
         <View style={styles.header}>
-          <View style={styles.logo}>
-            <Globe color="#fff" size={26} />
+          <View style={[styles.logo, { backgroundColor: theme.colors.primary }]}> 
+            <Ionicons name="globe-outline" size={26} color="#fff" />
           </View>
           <Text style={styles.title}>LingoLink</Text>
           <Text style={styles.subtitle}>
@@ -81,59 +83,31 @@ const LoginScreen = () => {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputBox}>
-            <Mail size={18} color="#888" />
-            <TextInput
-              placeholder="Enter Your Email"
-              placeholderTextColor="#000"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setErrors((prev) => ({
-                  ...prev,
-                  email: validateEmail(text),
-                }));
-              }}
-              style={styles.input}
-            />
-          </View>
-          {errors.email ? <Text style={styles.error}>{errors.email}</Text> : null}
+          <Input
+            icon="mail-outline"
+            placeholder="Enter Your Email"
+            value={email}
+            onChange={(text: string) => {
+              setEmail(text);
+              setErrors((prev) => ({ ...prev, email: validateEmail(text) }));
+            }}
+            error={errors.email}
+            keyboardType="email-address"
+          />
 
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputBox}>
-            <Lock size={18} color="#888" />
-            <TextInput
-              placeholder="Enter Your Password"
-              placeholderTextColor="#000"
-              secureTextEntry={!isPasswordVisible}
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setErrors((prev) => ({
-                  ...prev,
-                  password: validatePassword(text),
-                }));
-              }}
-              style={styles.input}
-            />
-            <TouchableOpacity
-              style={{ paddingLeft: 5 }}
-              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            >
-              {isPasswordVisible ? (
-                <EyeOff size={18} color="#888" />
-              ) : (
-                <Eye size={18} color="#888" />
-              )}
-            </TouchableOpacity>
-          </View>
-          {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
+          <Input
+            icon="lock-closed-outline"
+            placeholder="Enter Your Password"
+            value={password}
+            onChange={(text: string) => {
+              setPassword(text);
+              setErrors((prev) => ({ ...prev, password: validatePassword(text) }));
+            }}
+            error={errors.password}
+            secure={!isPasswordVisible}
+          />
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Log in</Text>
-          </TouchableOpacity>
+          <Button title="Log in" onPress={handleLogin} />
         </View>
 
         <View style={styles.footer}>

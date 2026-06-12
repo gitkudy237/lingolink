@@ -1,14 +1,16 @@
 import React from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import theme from "../../src/theme";
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
-  placeholder: string;
+  placeholder?: string;
   value: string;
   onChange: (text: string) => void;
   error?: string;
   secure?: boolean;
+  keyboardType?: any;
 };
 
 const Input: React.FC<Props> = ({
@@ -18,17 +20,20 @@ const Input: React.FC<Props> = ({
   onChange,
   error,
   secure,
+  keyboardType,
 }) => {
   return (
-    <View style={{ marginBottom: 12 }}>
-      <View style={styles.inputBox}>
-        <Ionicons name={icon} size={20} color="#666" />
+    <View style={{ marginBottom: theme.spacing.sm }}>
+      <View style={[styles.inputBox, { backgroundColor: theme.colors.surface }]}>
+        <Ionicons name={icon} size={20} color={theme.colors.muted} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
+          placeholderTextColor={theme.colors.muted}
           secureTextEntry={secure}
           value={value}
           onChangeText={onChange}
+          keyboardType={keyboardType}
         />
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
@@ -43,17 +48,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderColor: "#eee",
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: 12,
+    height: theme.sizes.inputHeight,
   },
   input: {
     flex: 1,
-    height: 45,
     marginLeft: 10,
+    color: theme.colors.text,
+    fontSize: 15,
+    height: "100%",
   },
   error: {
-    color: "red",
+    color: theme.colors.danger,
     fontSize: 12,
+    marginTop: 6,
   },
 });

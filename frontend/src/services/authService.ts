@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { AuthLoginRequest, AuthRegisterRequest } from "@lingolink/shared";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.43.142:4000/api";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export const signup = async (data: AuthRegisterRequest) => {
   try {

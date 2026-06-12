@@ -224,7 +224,7 @@ export default function RegisterScreen() {
           </View>
           <Text style={styles.title}>LingoLink</Text>
           <Text style={styles.subtitle}>
-            Connect through the beauty of every tongue.
+            Connect through the beauty of every language.
           </Text>
         </View>
 

@@ -11,7 +11,9 @@ import {
     TouchableOpacity,
     View,
   } from "react-native";
-  import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import theme from "../src/theme";
 
 interface Message {
   id: string;
@@ -109,10 +111,10 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>←</Text>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
 
-        <View>
+        <View style={{ marginLeft: theme.spacing.md }}>
           <Text style={styles.chatTitle}>
             {parsedUser?.name || "LingoLink"}
           </Text>
@@ -179,78 +181,73 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderColor: "#E0E0E0",
-    backgroundColor: "#fff",
-  },
-  backButton: {
-    fontSize: 24,
-    marginRight: 16,
-    color: "#0A8F5A",
+    backgroundColor: theme.colors.surface,
   },
   chatTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111",
+    color: theme.colors.text,
   },
   chatSubtitle: {
-    color: "#666",
-    marginTop: 2,
+    color: theme.colors.muted,
+    marginTop: theme.spacing.xs,
   },
   messageList: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   messageBubble: {
     maxWidth: "80%",
-    padding: 12,
-    borderRadius: 18,
-    marginBottom: 10,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    marginBottom: theme.spacing.md,
   },
   myBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "#0A8F5A",
+    backgroundColor: theme.colors.primary,
   },
   theirBubble: {
     alignSelf: "flex-start",
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
   messageText: {
-    color: "#111",
+    color: theme.colors.text,
     fontSize: 14,
   },
   messageTime: {
-    marginTop: 6,
+    marginTop: theme.spacing.sm,
     fontSize: 10,
-    color: "#777",
+    color: theme.colors.muted,
     textAlign: "right",
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#fff",
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
   input: {
     flex: 1,
-    backgroundColor: "#F0F4F7",
+    backgroundColor: "rgba(15, 118, 110, 0.05)",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginRight: 10,
-    color: "#111",
+    marginRight: theme.spacing.md,
+    color: theme.colors.text,
   },
   sendButton: {
-    backgroundColor: "#0A8F5A",
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     paddingVertical: 12,
     paddingHorizontal: 18,
