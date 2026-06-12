@@ -7,6 +7,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TextInputProps,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -45,6 +46,54 @@ const countries = [
   { name: "France", code: "+33", flag: "🇫🇷" },
   { name: "Germany", code: "+49", flag: "🇩🇪" },
 ];
+
+type InputFieldProps = {
+  icon: any;
+  placeholder?: string;
+  value: string;
+  onChange: (text: string) => void;
+  secure?: boolean;
+  keyboardType?: TextInputProps["keyboardType"];
+};
+
+const InputField = React.memo(function InputField({
+  icon,
+  placeholder,
+  value,
+  onChange,
+  secure,
+  keyboardType,
+}: InputFieldProps) {
+  const [hidden, setHidden] = useState(!!secure);
+
+  return (
+    <View style={styles.inputContainer}>
+      <Ionicons name={icon} size={20} color="#666" />
+
+      <TextInput
+        placeholder={placeholder}
+        placeholderTextColor="#999"
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry={secure ? hidden : false}
+        keyboardType={keyboardType}
+        autoCapitalize="none"
+        autoCorrect={false}
+        style={styles.input}
+      />
+
+      {secure && (
+        <TouchableOpacity onPress={() => setHidden(!hidden)}>
+          <Ionicons
+            name={hidden ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color="#666"
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+});
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -158,36 +207,6 @@ export default function RegisterScreen() {
     }
   };
 
-  // ================= INPUT =================
-  const InputField = ({ icon, placeholder, value, onChange, secure }: any) => {
-    const [hidden, setHidden] = useState(secure);
-
-    return (
-      <View style={styles.inputContainer}>
-        <Ionicons name={icon} size={20} color="#666" />
-
-        <TextInput
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          value={value}
-          onChangeText={onChange}
-          secureTextEntry={hidden}
-          style={styles.input}
-        />
-
-        {secure && (
-          <TouchableOpacity onPress={() => setHidden(!hidden)}>
-            <Ionicons
-              name={hidden ? "eye-off-outline" : "eye-outline"}
-              size={20}
-              color="#666"
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <Toast {...toast} />
@@ -195,7 +214,7 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={styles.wrapper}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="none"
       >
         {/* HEADER */}
         <View style={styles.header}>
@@ -241,6 +260,7 @@ export default function RegisterScreen() {
             <View style={styles.phoneInput}>
               <TextInput
                 placeholder="Phone number"
+                placeholderTextColor="#999"
                 value={form.phone}
                 onChangeText={(text) => {
                   setForm({ ...form, phone: text });
@@ -250,6 +270,9 @@ export default function RegisterScreen() {
                   }));
                 }}
                 keyboardType="phone-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.input}
               />
             </View>
           </View>
@@ -284,6 +307,7 @@ export default function RegisterScreen() {
             icon="mail-outline"
             placeholder="Enter Your Email"
             value={form.email}
+            keyboardType="email-address"
             onChange={(text: string) => {
               setForm({ ...form, email: text });
               setErrors((prev) => ({
