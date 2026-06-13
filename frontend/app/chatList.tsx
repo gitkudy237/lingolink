@@ -9,62 +9,25 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
+import { fetchConversations } from "../src/services/conversationService";
+import DefaultAvatar from "./components/DefaultAvatar";
 
 interface Chat {
   id: string;
   name: string;
   message: string;
   time: string;
-  avatar: string;
+  avatar?: string;
   unread?: number;
   online?: boolean;
+  fullName?: string;
+  conversationType?: string;
 }
-
-const chats: Chat[] = [
-  {
-    id: "1",
-    name: "Amadou",
-    message: "See you soon!",
-    time: "10:42 AM",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    unread: 4,
-    online: true,
-  },
-  {
-    id: "2",
-    name: "Elena",
-    message: "✔✔ Hola, ¿cómo estás?",
-    time: "09:15 AM",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    unread: 2,
-  },
-  {
-    id: "3",
-    name: "John",
-    message: "🎤 Voice Note (0:15)",
-    time: "Yesterday",
-    avatar: "https://i.pravatar.cc/150?img=3",
-  },
-  {
-    id: "4",
-    name: "Group Chat: Project Team",
-    message:
-      "Sarah: The translation API documentation has been updated...",
-    time: "Tuesday",
-    avatar: "https://i.pravatar.cc/150?img=4",
-  },
-  {
-    id: "5",
-    name: "Jean-Paul",
-    message: "🖼️ Photo",
-    time: "11:20 PM",
-    avatar: "https://i.pravatar.cc/150?img=5",
-  },
-];
 
 export default function ChatList() {
   const [activeTab, setActiveTab] = useState("All");
@@ -74,38 +37,103 @@ export default function ChatList() {
     email: string;
     phone: string;
   } | null>(null);
-  const [chatItems, setChatItems] = useState<Chat[]>(chats);
+  const [chatItems, setChatItems] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const router = useRouter();
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const getConversationName = (conversation: any, currentUserId: string) => {
+    if (conversation.type === "group") {
+      return conversation.title || "Group Chat";
+    }
+
+    // For direct conversations, get the other user's name
+    const otherUser = conversation.participants.find(
+      (p: any) => p.user?.id !== currentUserId
+    );
+    return otherUser?.user?.username || "Unknown User";
+  };
+
+  const getConversationAvatar = (conversation: any, currentUserId: string) => {
+    if (conversation.type === "group") {
+      return null; // Will use DefaultAvatar
+    }
+
+    const otherUser = conversation.participants.find(
+      (p: any) => p.user?.id !== currentUserId
+    );
+    return otherUser?.user?.profileImageUrl || null;
+  };
+
+  const getConversationUserName = (conversation: any, currentUserId: string) => {
+    if (conversation.type === "group") {
+      return conversation.title || "Group Chat";
+    }
+
+    const otherUser = conversation.participants.find(
+      (p: any) => p.user?.id !== currentUserId
+    );
+    return otherUser?.user?.username || "Unknown User";
+  };
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
+
         const storedCurrentUser = await SecureStore.getItemAsync("currentUser");
         if (storedCurrentUser) {
           setCurrentUser(JSON.parse(storedCurrentUser));
         }
 
-        const updatedChats = await Promise.all(
-          chats.map(async (chat) => {
-            const stored = await SecureStore.getItemAsync(`messages-${chat.id}`);
-            if (!stored) return chat;
+        const currentUserData = storedCurrentUser
+          ? JSON.parse(storedCurrentUser)
+          : null;
 
-            const messages = JSON.parse(stored) as { text: string; createdAt: string }[];
-            if (!messages.length) return chat;
+        if (!currentUserData) {
+          console.log("No current user found");
+          return;
+        }
 
-            const lastMessage = messages[messages.length - 1];
-            return {
-              ...chat,
-              message: lastMessage.text,
-              time: lastMessage.createdAt,
-            };
-          })
-        );
+        const conversations = await fetchConversations();
 
-        setChatItems(updatedChats);
+        const chats = conversations.map((conversation: any) => {
+          const lastMessage = conversation.messages?.[0];
+          const userName = getConversationUserName(conversation, currentUserData.id);
+
+          return {
+            id: conversation.id,
+            name: userName,
+            message: lastMessage?.originalText || "No messages yet",
+            time: lastMessage
+              ? formatTime(lastMessage.createdAt)
+              : "Just now",
+            avatar: getConversationAvatar(conversation, currentUserData.id),
+            fullName: userName,
+            conversationType: conversation.type,
+          };
+        });
+
+        setChatItems(chats);
       } catch (error) {
         console.log("CHAT LIST LOAD ERROR", error);
+      } finally {
       }
     };
 
@@ -128,12 +156,16 @@ export default function ChatList() {
         router.push({
           pathname: "/chatScreen",
           params: { user: JSON.stringify(item) },
-        } as any) // ✅ FIXED
+        } as any)
       }
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <View>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          {item.avatar ? (
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          ) : (
+            <DefaultAvatar name={item.fullName || item.name} size={50} />
+          )}
           {item.online && <View style={styles.onlineDot} />}
         </View>
 
@@ -211,12 +243,28 @@ export default function ChatList() {
       </View>
 
       {/* LIST */}
-      <FlatList
-        data={filteredChats}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-      />
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      ) : filteredChats.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+          <Ionicons name="chatbubbles-outline" size={64} color={theme.colors.muted} />
+          <Text style={{ marginTop: 16, fontSize: 16, color: theme.colors.muted }}>
+            No conversations yet
+          </Text>
+          <Text style={{ fontSize: 14, color: theme.colors.muted, marginTop: 8 }}>
+            Start a new chat to begin messaging
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredChats}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+        />
+      )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -224,7 +272,7 @@ export default function ChatList() {
         activeOpacity={0.8}
         onPress={() => router.push("/newChat")}
       >
-        <Text style={{ color: "#fff", fontSize: 24 }}>＋</Text>
+        <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
       {/* BOTTOM NAV */}
