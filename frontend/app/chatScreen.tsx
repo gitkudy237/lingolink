@@ -57,7 +57,7 @@ export default function ChatScreen() {
           const initial = [
             {
               id: "intro-1",
-              text: `Hi ${parsedUser.name}! Start your language chat with ${parsedUser.name}.`,
+                text: `Hi ${parsedUser.name || parsedUser.username}! Start your language chat with ${parsedUser.name || parsedUser.username}.`,
               sender: "them" as const,
               createdAt: new Date().toLocaleTimeString([], {
                 hour: "2-digit",
@@ -116,7 +116,7 @@ export default function ChatScreen() {
 
         <View style={{ marginLeft: theme.spacing.md }}>
           <Text style={styles.chatTitle}>
-            {parsedUser?.name || "LingoLink"}
+                  {parsedUser?.name || parsedUser?.username || "LingoLink"}
           </Text>
           <Text style={styles.chatSubtitle} numberOfLines={1}>
             {currentUser

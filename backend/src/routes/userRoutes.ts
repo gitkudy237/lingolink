@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
-import { findUserById, updateUser } from "../models/userModel";
+import { findAllUsers, findUserById, updateUser } from "../models/userModel";
 
 const router = Router();
 
@@ -16,6 +16,15 @@ router.get("/me", authMiddleware, async (req, res) => {
     }
 
     res.status(200).json({ user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const users = await findAllUsers();
+    res.status(200).json({ users });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

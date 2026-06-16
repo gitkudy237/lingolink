@@ -86,3 +86,20 @@ export async function updateUser(id: string, data: Partial<{ username: string; p
     },
   });
 }
+
+export async function findAllUsers() {
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      username: true,
+      preferredLanguage: true,
+      profileImageUrl: true,
+      createdAt: true,
+    },
+    orderBy: {
+      username: "asc",
+    },
+  });
+}
