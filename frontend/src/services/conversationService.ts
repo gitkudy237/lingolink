@@ -67,4 +67,43 @@ export const createDirectConversation = async (otherUserId: string) => {
   }
 };
 
+export const fetchMessages = async (conversationId: string, limit = 50) => {
+  try {
+    const token = await SecureStore.getItemAsync("authToken");
+    if (!token) throw new Error("No auth token found");
+
+    const response = await axios.get(
+      `${API_BASE_URL}/conversations/${conversationId}/messages?limit=${limit}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data.messages || [];
+  } catch (error: any) {
+    console.error("Fetch messages error:", error);
+    throw error.response?.data || { message: "Failed to fetch messages" };
+  }
+};
+
+export const sendMessageRest = async (conversationId: string, payload: any) => {
+  try {
+    const token = await SecureStore.getItemAsync("authToken");
+    if (!token) throw new Error("No auth token found");
+
+    const response = await axios.post(
+      `${API_BASE_URL}/conversations/${conversationId}/messages`,
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data.message;
+  } catch (error: any) {
+    console.error("Send message (REST) error:", error);
+    throw error.response?.data || { message: "Failed to send message" };
+  }
+};
+
 export default {};

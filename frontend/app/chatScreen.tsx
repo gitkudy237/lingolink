@@ -1,81 +1,169 @@
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-  } from "react-native";
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
+import { fetchMessages, sendMessageRest } from "../src/services/conversationService";
+import {
+  connectSocket,
+  disconnectSocket,
+  joinConversation,
+  leaveConversation,
+  onMessage,
+  offMessage,
+} from "../src/services/socket";
 
 interface Message {
   id: string;
-  text: string;
-  sender: "me" | "them";
+  conversationId: string;
+  senderId: string;
+  senderEmail?: string;
+  type: string;
+  originalText?: string | null;
   createdAt: string;
+  sender: "me" | "them";
 }
 
 export default function ChatScreen() {
-  const { user } = useLocalSearchParams();
+  const { conversationId, user } = useLocalSearchParams();
   const router = useRouter();
 
   const parsedUser = user ? JSON.parse(user as string) : null;
+  const conversationIdValue = conversationId as string | undefined;
+
   const [currentUser, setCurrentUser] = useState<{
+    id: string;
     username: string;
     email: string;
     phone: string;
   } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const storageKey = parsedUser
-    ? `messages-${parsedUser.id}`
-    : "messages-unknown";
+  const storageKey = useMemo(
+    () => (conversationIdValue ? `messages-${conversationIdValue}` : "messages-unknown"),
+    [conversationIdValue]
+  );
 
   useEffect(() => {
+    let mounted = true;
+
     const loadChat = async () => {
+      if (!conversationIdValue) return;
+
       try {
+        setLoading(true);
         const storedCurrentUser = await SecureStore.getItemAsync("currentUser");
         if (storedCurrentUser) {
           setCurrentUser(JSON.parse(storedCurrentUser));
         }
 
         const storedMessages = await SecureStore.getItemAsync(storageKey);
-        if (storedMessages) {
+        if (storedMessages && mounted) {
           setMessages(JSON.parse(storedMessages));
-          return;
         }
 
-        if (parsedUser) {
-          const initial = [
-            {
-              id: "intro-1",
-                text: `Hi ${parsedUser.name || parsedUser.username}! Start your language chat with ${parsedUser.name || parsedUser.username}.`,
-              sender: "them" as const,
-              createdAt: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            },
-          ];
+        const fetchedMessages = await fetchMessages(conversationIdValue);
+        if (!mounted) return;
 
-          setMessages(initial);
-          await SecureStore.setItemAsync(storageKey, JSON.stringify(initial));
-        }
-      } catch (error) {
-        console.log("CHAT LOAD ERROR", error);
+        const normalized = fetchedMessages.map((message: any) => ({
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          senderEmail: message.senderEmail,
+          type: message.type,
+          originalText: message.originalText,
+          createdAt: message.createdAt,
+          sender: currentUser?.id === message.senderId ? "me" : "them",
+        } as Message));
+
+        setMessages(normalized);
+        await SecureStore.setItemAsync(storageKey, JSON.stringify(normalized));
+      } catch (err: any) {
+        console.log("CHAT LOAD ERROR", err);
+        if (mounted) setError(err.message || "Unable to load messages.");
+      } finally {
+        if (mounted) setLoading(false);
       }
     };
 
     loadChat();
-  }, [storageKey, parsedUser]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [conversationIdValue, storageKey, currentUser?.id]);
+
+  useEffect(() => {
+    if (!conversationIdValue) return;
+
+    const handleIncomingMessage = (payload: any) => {
+      if (payload.conversationId !== conversationIdValue) return;
+      setMessages((previous) => {
+        if (previous.some((message) => message.id === payload.id)) {
+          return previous;
+        }
+
+        const nextMessage: Message = {
+          id: payload.id,
+          conversationId: payload.conversationId,
+          senderId: payload.senderId,
+          senderEmail: payload.senderEmail,
+          type: payload.type,
+          originalText: payload.originalText,
+          createdAt: payload.createdAt,
+          sender: currentUser?.id === payload.senderId ? "me" : "them",
+        };
+
+        const nextMessages = [...previous, nextMessage];
+        SecureStore.setItemAsync(storageKey, JSON.stringify(nextMessages));
+        return nextMessages;
+      });
+    };
+
+    const initSocket = async () => {
+      try {
+        await connectSocket();
+        await joinConversation(conversationIdValue);
+        await onMessage(handleIncomingMessage);
+      } catch (err) {
+        console.log("CHAT SOCKET ERROR", err);
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      offMessage(handleIncomingMessage);
+      leaveConversation(conversationIdValue);
+      disconnectSocket();
+    };
+  }, [conversationIdValue, currentUser?.id, storageKey]);
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return timestamp;
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const saveMessages = async (nextMessages: Message[]) => {
     try {
@@ -86,25 +174,37 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
+    if (!conversationIdValue) return;
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    const nextMessages = [
-      ...messages,
-      {
-        id: Date.now().toString(),
-        text: trimmed,
-        sender: "me" as const,
-        createdAt: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ];
-
-    setMessages(nextMessages);
+    const nextMessages = [...messages];
     setInput("");
-    await saveMessages(nextMessages);
+
+    try {
+      const saved = await sendMessageRest(conversationIdValue, {
+        type: "text",
+        originalText: trimmed,
+      });
+
+      const nextMessage: Message = {
+        id: saved.id,
+        conversationId: conversationIdValue,
+        senderId: saved.senderId,
+        senderEmail: saved.senderEmail,
+        type: saved.type,
+        originalText: saved.originalText,
+        createdAt: saved.createdAt,
+        sender: currentUser?.id === saved.senderId ? "me" : "them",
+      };
+
+      const updatedMessages = [...nextMessages, nextMessage];
+      setMessages(updatedMessages);
+      await saveMessages(updatedMessages);
+    } catch (err: any) {
+      console.log("SEND MESSAGE ERROR", err);
+      setError(err.message || "Unable to send message.");
+    }
   };
 
   return (
@@ -116,7 +216,7 @@ export default function ChatScreen() {
 
         <View style={{ marginLeft: theme.spacing.md }}>
           <Text style={styles.chatTitle}>
-                  {parsedUser?.name || parsedUser?.username || "LingoLink"}
+            {parsedUser?.name || parsedUser?.username || "LingoLink"}
           </Text>
           <Text style={styles.chatSubtitle} numberOfLines={1}>
             {currentUser
@@ -126,36 +226,48 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.messageBubble,
-              item.sender === "me" ? styles.myBubble : styles.theirBubble,
-            ]}
-          >
-            <Text
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading messages...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messageList}
+          renderItem={({ item }) => (
+            <View
               style={[
-                styles.messageText,
-                item.sender === "me" && { color: "#fff" },
+                styles.messageBubble,
+                item.sender === "me" ? styles.myBubble : styles.theirBubble,
               ]}
             >
-              {item.text}
-            </Text>
-            <Text
-              style={[
-                styles.messageTime,
-                item.sender === "me" && { color: "rgba(255,255,255,0.8)" },
-              ]}
-            >
-              {item.createdAt}
-            </Text>
-          </View>
-        )}
-      />
+              <Text
+                style={[
+                  styles.messageText,
+                  item.sender === "me" && { color: "#fff" },
+                ]}
+              >
+                {item.originalText}
+              </Text>
+              <Text
+                style={[
+                  styles.messageTime,
+                  item.sender === "me" && { color: "rgba(255,255,255,0.8)" },
+                ]}
+              >
+                {formatTime(item.createdAt)}
+              </Text>
+            </View>
+          )}
+        />
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -200,6 +312,26 @@ const styles = StyleSheet.create({
   chatSubtitle: {
     color: theme.colors.muted,
     marginTop: theme.spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: theme.colors.muted,
+    fontSize: 14,
+  },
+  errorBox: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.md,
+    backgroundColor: "#fee2e2",
+    borderRadius: theme.radii.md,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: 13,
   },
   messageList: {
     paddingHorizontal: theme.spacing.md,

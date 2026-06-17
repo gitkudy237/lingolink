@@ -71,14 +71,17 @@ export default function NewChat() {
     setError(null);
 
     try {
-      await createDirectConversation(user.id);
+      const conversation = await createDirectConversation(user.id);
       router.push({
         pathname: "/chatScreen",
-        params: { user: JSON.stringify({
-          id: user.id,
-          name: user.username,
-          username: user.username,
-        }) },
+        params: {
+          conversationId: conversation.id,
+          user: JSON.stringify({
+            id: user.id,
+            name: user.username,
+            username: user.username,
+          }),
+        },
       } as any);
     } catch (err: any) {
       console.log("NEW CHAT CREATE ERROR", err);
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
   },
   errorText: {
-    color: theme.colors.error || "#D32F2F",
+    color: theme.colors.danger || "#D32F2F",
     textAlign: "center",
   },
   emptyTitle: {
