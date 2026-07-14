@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
+import { findConversationByIdWithParticipants } from "../models/conversationModel";
 import { fetchMessages, markConversationRead, sendMessage } from "../services/messageService";
+import { Prisma } from "@prisma/client";
 
 const router = Router({ mergeParams: true });
 
@@ -23,6 +25,36 @@ router.post("/", async (req, res) => {
       transcriptionText,
       metadata,
     });
+
+    const conversation = await findConversationByIdWithParticipants(conversationId);
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit("message", {
+        id: message.id,
+        conversationId,
+        senderId: req.user.id,
+        senderEmail: req.user.email,
+        type: message.type,
+        originalText: message.originalText,
+        translatedText: message.translatedText,
+        transcriptionText: message.transcriptionText,
+        metadata: message.metadata,
+        createdAt: message.createdAt.toISOString(),
+      });
+
+      if (conversation) {
+        const unreadCounts: Record<string, number> = {};
+        for (const participant of conversation.participants) {
+          unreadCounts[participant.userId] = participant.unreadCount;
+        }
+
+        io.to(`conversation:${conversationId}`).emit("unread_counts_updated", {
+          conversationId,
+          unreadCounts,
+        });
+      }
+    }
 
     res.status(201).json({ message });
   } catch (error: any) {
