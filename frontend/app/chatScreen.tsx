@@ -48,6 +48,11 @@ interface Message {
   sender: "me" | "them";
 }
 
+type MessageGroup = {
+  dateLabel: string;
+  messages: Message[];
+};
+
 export default function ChatScreen() {
   const { conversationId, user } = useLocalSearchParams();
   const router = useRouter();
@@ -273,6 +278,54 @@ export default function ChatScreen() {
     });
   };
 
+  const formatDateLabel = (timestamp: string) => {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return timestamp;
+    }
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const sameDay =
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate();
+
+    const isYesterday =
+      date.getFullYear() === yesterday.getFullYear() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getDate() === yesterday.getDate();
+
+    if (sameDay) return "Today";
+    if (isYesterday) return "Yesterday";
+
+    return date.toLocaleDateString([], {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    });
+  };
+
+  const groupedMessages = messages.reduce<MessageGroup[]>((groups, message) => {
+    const dateLabel = formatDateLabel(message.createdAt);
+    const lastGroup = groups[groups.length - 1];
+
+    if (lastGroup && lastGroup.dateLabel === dateLabel) {
+      lastGroup.messages.push(message);
+      return groups;
+    }
+
+    groups.push({
+      dateLabel,
+      messages: [message],
+    });
+
+    return groups;
+  }, []);
+
   const saveMessages = async (nextMessages: Message[]) => {
     try {
       await SecureStore.setItemAsync(storageKey, JSON.stringify(nextMessages));
@@ -375,33 +428,42 @@ export default function ChatScreen() {
           ) : (
             <FlatList
               style={styles.messageListWrapper}
-              data={messages}
-              keyExtractor={(item) => item.id}
+              data={groupedMessages}
+              keyExtractor={(item) => item.dateLabel}
               contentContainerStyle={styles.messageList}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
-                <View
-                  style={[
-                    styles.messageBubble,
-                    item.sender === "me" ? styles.myBubble : styles.theirBubble,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.messageText,
-                      item.sender === "me" && { color: "#fff" },
-                    ]}
-                  >
-                    {item.originalText}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.messageTime,
-                      item.sender === "me" && { color: "rgba(255,255,255,0.8)" },
-                    ]}
-                  >
-                    {formatTime(item.createdAt)}
-                  </Text>
+                <View style={styles.messageGroup}>
+                  <View style={styles.dateSeparator}>
+                    <Text style={styles.dateSeparatorText}>{item.dateLabel}</Text>
+                  </View>
+
+                  {item.messages.map((message) => (
+                    <View
+                      key={message.id}
+                      style={[
+                        styles.messageBubble,
+                        message.sender === "me" ? styles.myBubble : styles.theirBubble,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.messageText,
+                          message.sender === "me" && { color: "#fff" },
+                        ]}
+                      >
+                        {message.originalText}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.messageTime,
+                          message.sender === "me" && { color: "rgba(255,255,255,0.8)" },
+                        ]}
+                      >
+                        {formatTime(message.createdAt)}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               )}
             />
@@ -486,6 +548,22 @@ const styles = StyleSheet.create({
   },
   messageListWrapper: {
     flex: 1,
+  },
+  messageGroup: {
+    marginBottom: theme.spacing.md,
+  },
+  dateSeparator: {
+    alignItems: "center",
+    marginVertical: theme.spacing.sm,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: theme.colors.muted,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 999,
+    overflow: "hidden",
   },
   messageBubble: {
     maxWidth: "80%",
