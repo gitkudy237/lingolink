@@ -343,79 +343,82 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-
-        <View style={{ marginLeft: theme.spacing.md }}>
-          <Text style={styles.chatTitle}>
-            {chatTitle}
-          </Text>
-          <Text style={styles.chatSubtitle} numberOfLines={1}>
-            {headerStatus}
-          </Text>
-        </View>
-      </View>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading messages...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messageList}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.messageBubble,
-                item.sender === "me" ? styles.myBubble : styles.theirBubble,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.messageText,
-                  item.sender === "me" && { color: "#fff" },
-                ]}
-              >
-                {item.originalText}
-              </Text>
-              <Text
-                style={[
-                  styles.messageTime,
-                  item.sender === "me" && { color: "rgba(255,255,255,0.8)" },
-                ]}
-              >
-                {formatTime(item.createdAt)}
-              </Text>
-            </View>
-          )}
-        />
-      )}
-
       <KeyboardAvoidingView
+        style={styles.keyboardAvoidingContainer}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 60}
       >
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type your message..."
-            placeholderTextColor="#999"
-            value={input}
-            onChangeText={handleInputChange}
-          />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendText}>Send</Text>
-          </TouchableOpacity>
+        <View style={styles.screenBody}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+
+            <View style={{ marginLeft: theme.spacing.md }}>
+              <Text style={styles.chatTitle}>{chatTitle}</Text>
+              <Text style={styles.chatSubtitle} numberOfLines={1}>
+                {headerStatus}
+              </Text>
+            </View>
+          </View>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading messages...</Text>
+            </View>
+          ) : (
+            <FlatList
+              style={styles.messageListWrapper}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messageList}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <View
+                  style={[
+                    styles.messageBubble,
+                    item.sender === "me" ? styles.myBubble : styles.theirBubble,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.messageText,
+                      item.sender === "me" && { color: "#fff" },
+                    ]}
+                  >
+                    {item.originalText}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.messageTime,
+                      item.sender === "me" && { color: "rgba(255,255,255,0.8)" },
+                    ]}
+                  >
+                    {formatTime(item.createdAt)}
+                  </Text>
+                </View>
+              )}
+            />
+          )}
+
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type your message..."
+              placeholderTextColor="#999"
+              value={input}
+              onChangeText={handleInputChange}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+              <Text style={styles.sendText}>Send</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -426,6 +429,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  keyboardAvoidingContainer: {
+    flex: 1,
+  },
+  screenBody: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -474,6 +483,9 @@ const styles = StyleSheet.create({
   messageList: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
+  },
+  messageListWrapper: {
+    flex: 1,
   },
   messageBubble: {
     maxWidth: "80%",
