@@ -15,6 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
 import { createDirectConversation, fetchUsers } from "../src/services/conversationService";
+import { fetchUserPresence } from "../src/services/userService";
+import { onPresenceUpdate, offPresenceUpdate } from "../src/services/socket";
 import DefaultAvatar from "./components/DefaultAvatar";
 
 type User = {
@@ -24,6 +26,7 @@ type User = {
   phone: string;
   preferredLanguage?: string;
   profileImageUrl?: string;
+  online?: boolean;
 };
 
 export default function NewChat() {
@@ -44,7 +47,20 @@ export default function NewChat() {
         const filtered = storedCurrentUser
           ? fetchedUsers.filter((user: User) => user.id !== JSON.parse(storedCurrentUser).id)
           : fetchedUsers;
-        setUsers(filtered);
+
+        const usersWithPresence = await Promise.all(
+          filtered.map(async (user: User) => {
+            try {
+              const presence = await fetchUserPresence(user.id);
+              return { ...user, online: presence.online };
+            } catch (presenceError) {
+              console.log("NEW CHAT PRESENCE ERROR", presenceError);
+              return { ...user, online: false };
+            }
+          })
+        );
+
+        setUsers(usersWithPresence);
       } catch (err: any) {
         console.log("NEW CHAT LOAD ERROR", err);
         setError(err.message || "Unable to load users.");
@@ -54,6 +70,24 @@ export default function NewChat() {
     };
 
     loadUsers();
+  }, []);
+
+  useEffect(() => {
+    const handlePresenceUpdate = (payload: { userId: string; online: boolean }) => {
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.id === payload.userId ? { ...user, online: payload.online } : user
+        )
+      );
+    };
+
+    onPresenceUpdate(handlePresenceUpdate).catch((error) => {
+      console.log("NEW CHAT PRESENCE LISTENER ERROR", error);
+    });
+
+    return () => {
+      offPresenceUpdate(handlePresenceUpdate);
+    };
   }, []);
 
   const filteredUsers = users.filter((user) => {
@@ -137,11 +171,14 @@ export default function NewChat() {
               disabled={creatingConversation === item.id}
             >
               <View style={styles.userInfo}>
-                {item.profileImageUrl ? (
-                  <Image source={{ uri: item.profileImageUrl }} style={styles.avatar} />
-                ) : (
-                  <DefaultAvatar name={item.username} size={48} />
-                )}
+                <View style={styles.avatarStack}>
+                  {item.profileImageUrl ? (
+                    <Image source={{ uri: item.profileImageUrl }} style={styles.avatar} />
+                  ) : (
+                    <DefaultAvatar name={item.username} size={48} />
+                  )}
+                  {item.online ? <View style={styles.onlineDot} /> : null}
+                </View>
                 <View style={styles.meta}>
                   <Text style={styles.username}>{item.username}</Text>
                   <Text style={styles.subtitle}>{item.email}</Text>
@@ -214,6 +251,13 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
   },
+  avatarStack: {
+    position: "relative",
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   meta: {
     marginLeft: theme.spacing.md,
     maxWidth: "75%",
@@ -226,6 +270,17 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     marginTop: 4,
     fontSize: 12,
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#10b981",
+    position: "absolute",
+    right: -1,
+    bottom: -1,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
   },
   centered: {
     flex: 1,

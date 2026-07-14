@@ -15,6 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
 import { fetchConversations } from "../src/services/conversationService";
+import { fetchUserPresence } from "../src/services/userService";
+import { onPresenceUpdate, offPresenceUpdate } from "../src/services/socket";
 import DefaultAvatar from "./components/DefaultAvatar";
 
 interface Chat {
@@ -24,9 +26,10 @@ interface Chat {
   time: string;
   avatar?: string;
   unread: number;
-  online?: boolean;
+  online: boolean;
   fullName?: string;
   conversationType: "direct" | "group";
+  userId?: string;
 }
 
 export default function ChatList() {
@@ -85,6 +88,18 @@ export default function ChatList() {
     return otherUser?.user?.profileImageUrl || null;
   };
 
+  const getConversationOnlineUserId = (conversation: any, currentUserId: string) => {
+    if (conversation.type === "group") {
+      return null;
+    }
+
+    const otherUser = conversation.participants.find(
+      (participant: any) => participant.user?.id !== currentUserId
+    );
+
+    return otherUser?.user?.id || null;
+  };
+
   const getLastMessagePreview = (conversation: any) => {
     const lastMessage = conversation.messages?.[0];
 
@@ -133,13 +148,25 @@ export default function ChatList() {
 
         const conversations = await fetchConversations();
 
-        const chats = conversations.map((conversation: any) => {
+        const chats = await Promise.all(
+          conversations.map(async (conversation: any) => {
           const userName = getConversationName(conversation, currentUserData.id);
           const currentParticipant = getCurrentUserParticipant(
             conversation,
             currentUserData.id
           );
           const lastMessage = conversation.messages?.[0];
+          const onlineUserId = getConversationOnlineUserId(conversation, currentUserData.id);
+          let online = false;
+
+          if (onlineUserId) {
+            try {
+              const presence = await fetchUserPresence(onlineUserId);
+              online = presence.online;
+            } catch (presenceError) {
+              console.log("CHAT LIST PRESENCE ERROR", presenceError);
+            }
+          }
 
           return {
             id: conversation.id,
@@ -150,8 +177,11 @@ export default function ChatList() {
             fullName: userName,
             unread: currentParticipant?.unreadCount ?? 0,
             conversationType: conversation.type,
+            online,
+            userId: onlineUserId || undefined,
           };
-        });
+          })
+        );
 
         setChatItems(chats);
       } catch (error) {
@@ -162,6 +192,24 @@ export default function ChatList() {
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handlePresenceUpdate = (payload: { userId: string; online: boolean }) => {
+      setChatItems((previous) =>
+        previous.map((chat) =>
+          chat.userId === payload.userId ? { ...chat, online: payload.online } : chat
+        )
+      );
+    };
+
+    onPresenceUpdate(handlePresenceUpdate).catch((error) => {
+      console.log("CHAT LIST PRESENCE LISTENER ERROR", error);
+    });
+
+    return () => {
+      offPresenceUpdate(handlePresenceUpdate);
+    };
   }, []);
 
   const filteredChats = chatItems.filter((chat) => {
@@ -191,7 +239,7 @@ export default function ChatList() {
       }
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <View>
+        <View style={styles.avatarStack}>
           {item.avatar ? (
             <Image source={{ uri: item.avatar }} style={styles.avatar} />
           ) : (
@@ -381,14 +429,24 @@ const styles = StyleSheet.create({
 
   avatar: { width: 50, height: 50, borderRadius: 25 },
 
+  avatarStack: {
+    position: "relative",
+    width: 50,
+    height: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   onlineDot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     backgroundColor: "#10b981",
-    borderRadius: 5,
+    borderRadius: 4,
     position: "absolute",
-    bottom: 2,
-    right: 2,
+    right: -1,
+    bottom: -1,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
   },
 
   info: { marginLeft: theme.spacing.md },
