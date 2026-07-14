@@ -23,16 +23,17 @@ interface Chat {
   message: string;
   time: string;
   avatar?: string;
-  unread?: number;
+  unread: number;
   online?: boolean;
   fullName?: string;
-  conversationType?: string;
+  conversationType: "direct" | "group";
 }
 
 export default function ChatList() {
   const [activeTab, setActiveTab] = useState("All");
   const [search, setSearch] = useState("");
   const [currentUser, setCurrentUser] = useState<{
+    id: string;
     username: string;
     email: string;
     phone: string;
@@ -58,12 +59,15 @@ export default function ChatList() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const getCurrentUserParticipant = (conversation: any, currentUserId: string) => {
+    return conversation.participants.find((participant: any) => participant.userId === currentUserId);
+  };
+
   const getConversationName = (conversation: any, currentUserId: string) => {
     if (conversation.type === "group") {
       return conversation.title || "Group Chat";
     }
 
-    // For direct conversations, get the other user's name
     const otherUser = conversation.participants.find(
       (p: any) => p.user?.id !== currentUserId
     );
@@ -81,15 +85,30 @@ export default function ChatList() {
     return otherUser?.user?.profileImageUrl || null;
   };
 
-  const getConversationUserName = (conversation: any, currentUserId: string) => {
-    if (conversation.type === "group") {
-      return conversation.title || "Group Chat";
+  const getLastMessagePreview = (conversation: any) => {
+    const lastMessage = conversation.messages?.[0];
+
+    if (!lastMessage) {
+      return "No messages yet";
     }
 
-    const otherUser = conversation.participants.find(
-      (p: any) => p.user?.id !== currentUserId
-    );
-    return otherUser?.user?.username || "Unknown User";
+    const text = lastMessage.translatedText || lastMessage.originalText;
+    if (text && text.trim()) {
+      return text;
+    }
+
+    switch (lastMessage.type) {
+      case "image":
+        return "Image";
+      case "document":
+        return "Document";
+      case "audio":
+        return "Audio";
+      case "voice_note":
+        return "Voice note";
+      default:
+        return "New message";
+    }
   };
 
   useEffect(() => {
@@ -108,24 +127,28 @@ export default function ChatList() {
 
         if (!currentUserData) {
           console.log("No current user found");
+          setChatItems([]);
           return;
         }
 
         const conversations = await fetchConversations();
 
         const chats = conversations.map((conversation: any) => {
+          const userName = getConversationName(conversation, currentUserData.id);
+          const currentParticipant = getCurrentUserParticipant(
+            conversation,
+            currentUserData.id
+          );
           const lastMessage = conversation.messages?.[0];
-          const userName = getConversationUserName(conversation, currentUserData.id);
 
           return {
             id: conversation.id,
             name: userName,
-            message: lastMessage?.originalText || "No messages yet",
-            time: lastMessage
-              ? formatTime(lastMessage.createdAt)
-              : "Just now",
+            message: getLastMessagePreview(conversation),
+            time: lastMessage ? formatTime(lastMessage.createdAt) : "",
             avatar: getConversationAvatar(conversation, currentUserData.id),
             fullName: userName,
+            unread: currentParticipant?.unreadCount ?? 0,
             conversationType: conversation.type,
           };
         });
@@ -134,6 +157,7 @@ export default function ChatList() {
       } catch (error) {
         console.log("CHAT LIST LOAD ERROR", error);
       } finally {
+        setLoading(false);
       }
     };
 
@@ -141,9 +165,9 @@ export default function ChatList() {
   }, []);
 
   const filteredChats = chatItems.filter((chat) => {
-    if (activeTab === "Unread" && !chat.unread) return false;
-    if (activeTab === "Groups" && !chat.name.includes("Group")) return false;
-    if (activeTab === "Personal" && chat.name.includes("Group")) return false;
+    if (activeTab === "Unread" && chat.unread === 0) return false;
+    if (activeTab === "Groups" && chat.conversationType !== "group") return false;
+    if (activeTab === "Personal" && chat.conversationType !== "direct") return false;
 
     return chat.name.toLowerCase().includes(search.toLowerCase());
   });
@@ -186,7 +210,7 @@ export default function ChatList() {
 
       <View style={{ alignItems: "flex-end" }}>
         <Text style={styles.time}>{item.time}</Text>
-        {item.unread && (
+        {item.unread > 0 && (
           <View style={styles.unreadBadge}>
             <Text style={styles.unreadText}>{item.unread}</Text>
           </View>

@@ -12,7 +12,9 @@ export async function listConversationsForUser(userId: string) {
     },
     include: {
       participants: {
-        include: {
+        select: {
+          userId: true,
+          unreadCount: true,
           user: {
             select: {
               id: true,
