@@ -11,8 +11,15 @@ import {
 } from "../models/userModel";
 
 const saltRounds = 12;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,72}$/;
+const PASSWORD_ERROR_MESSAGE =
+  "Password must be 8-72 characters and include uppercase, lowercase, a number, and a special character.";
 
 export async function registerUser(payload: AuthRegisterRequest) {
+  if (!PASSWORD_REGEX.test(payload.password)) {
+    throw new Error(PASSWORD_ERROR_MESSAGE);
+  }
+
   // Check for existing users
   const existingEmail = await findUserByEmail(payload.email);
   if (existingEmail) {

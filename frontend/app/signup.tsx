@@ -47,6 +47,10 @@ const countries = [
   { name: "Germany", code: "+49", flag: "🇩🇪" },
 ];
 
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,72}$/;
+const PASSWORD_ERROR_MESSAGE =
+  "Password must be 8-72 characters and include uppercase, lowercase, a number, and a special character.";
+
 type InputFieldProps = {
   icon: any;
   placeholder?: string;
@@ -154,12 +158,8 @@ export default function RegisterScreen() {
   const validatePassword = (text: string) => {
     if (!text.trim()) return "Password is required";
 
-    if (text.includes(".")) return "Dots (.) not allowed";
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-    if (!passwordRegex.test(text)) {
-      return "Must contain uppercase, lowercase, number & special character";
+    if (!PASSWORD_REGEX.test(text)) {
+      return PASSWORD_ERROR_MESSAGE;
     }
 
     return "";
