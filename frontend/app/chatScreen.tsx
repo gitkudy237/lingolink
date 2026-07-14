@@ -24,10 +24,16 @@ import {
   connectSocket,
   joinConversation,
   leaveConversation,
+  emitStopTyping,
+  emitTyping,
   onMessage,
   offMessage,
   onPresenceUpdate,
   offPresenceUpdate,
+  onStopTyping,
+  offStopTyping,
+  onTyping,
+  offTyping,
 } from "../src/services/socket";
 import { fetchUserPresence } from "../src/services/userService";
 
@@ -60,10 +66,12 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState(parsedUser?.name || parsedUser?.username || "LingoLink");
-  const [chatStatus, setChatStatus] = useState("Loading status...");
+  const [presenceStatus, setPresenceStatus] = useState("Loading status...");
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const currentUserIdRef = useRef<string | null>(null);
   const otherUserIdRef = useRef<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const storageKey = useMemo(
     () => (conversationIdValue ? `messages-${conversationIdValue}` : "messages-unknown"),
@@ -94,7 +102,7 @@ export default function ChatScreen() {
 
         if (conversation?.type === "group") {
           setChatTitle(conversation.title || "Group Chat");
-          setChatStatus(`${conversation.participants?.length || 0} members`);
+          setPresenceStatus(`${conversation.participants?.length || 0} members`);
         } else if (directParticipant?.user) {
           setOtherUserId(directParticipant.user.id);
           otherUserIdRef.current = directParticipant.user.id;
@@ -102,7 +110,7 @@ export default function ChatScreen() {
 
           try {
             const presence = await fetchUserPresence(directParticipant.user.id);
-            setChatStatus(
+            setPresenceStatus(
               presence.online
                 ? "Online"
                 : presence.lastSeenAt
@@ -116,7 +124,7 @@ export default function ChatScreen() {
             );
           } catch (presenceError) {
             console.log("PRESENCE LOAD ERROR", presenceError);
-            setChatStatus("Offline");
+            setPresenceStatus("Offline");
           }
         }
 
@@ -193,7 +201,7 @@ export default function ChatScreen() {
     const handlePresenceUpdate = (payload: any) => {
       if (!otherUserIdRef.current || payload.userId !== otherUserIdRef.current) return;
 
-      setChatStatus(
+      setPresenceStatus(
         payload.online
           ? "Online"
           : payload.lastSeenAt
@@ -207,12 +215,32 @@ export default function ChatScreen() {
       );
     };
 
+    const handleUserTyping = (payload: any) => {
+      if (payload.userId === currentUserIdRef.current) return;
+
+      setTypingUsers((previous) => {
+        if (previous.includes(payload.userId)) {
+          return previous;
+        }
+
+        return [...previous, payload.userId];
+      });
+    };
+
+    const handleUserStoppedTyping = (payload: any) => {
+      if (payload.userId === currentUserIdRef.current) return;
+
+      setTypingUsers((previous) => previous.filter((userId) => userId !== payload.userId));
+    };
+
     const initSocket = async () => {
       try {
         await connectSocket();
         await joinConversation(conversationIdValue);
         await onMessage(handleIncomingMessage);
         await onPresenceUpdate(handlePresenceUpdate);
+        await onTyping(handleUserTyping);
+        await onStopTyping(handleUserStoppedTyping);
       } catch (err) {
         console.log("CHAT SOCKET ERROR", err);
       }
@@ -223,6 +251,12 @@ export default function ChatScreen() {
     return () => {
       offMessage(handleIncomingMessage);
       offPresenceUpdate(handlePresenceUpdate);
+      offTyping(handleUserTyping);
+      offStopTyping(handleUserStoppedTyping);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      emitStopTyping(conversationIdValue).catch(() => undefined);
       leaveConversation(conversationIdValue);
     };
   }, [conversationIdValue, storageKey]);
@@ -254,6 +288,7 @@ export default function ChatScreen() {
 
     const nextMessages = [...messages];
     setInput("");
+    emitStopTyping(conversationIdValue).catch(() => undefined);
 
     try {
       const saved = await sendMessageRest(conversationIdValue, {
@@ -281,6 +316,31 @@ export default function ChatScreen() {
     }
   };
 
+  const handleInputChange = (text: string) => {
+    setInput(text);
+
+    if (!conversationIdValue) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    if (!text.trim()) {
+      emitStopTyping(conversationIdValue).catch(() => undefined);
+      return;
+    }
+
+    emitTyping(conversationIdValue).catch(() => undefined);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      emitStopTyping(conversationIdValue).catch(() => undefined);
+    }, 1500);
+  };
+
+  const typingLabel = typingUsers.length > 0 ? "Typing..." : "";
+  const headerStatus = typingUsers.length > 0 ? "Typing..." : presenceStatus;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -293,7 +353,7 @@ export default function ChatScreen() {
             {chatTitle}
           </Text>
           <Text style={styles.chatSubtitle} numberOfLines={1}>
-            {chatStatus}
+            {headerStatus}
           </Text>
         </View>
       </View>
@@ -351,7 +411,7 @@ export default function ChatScreen() {
             placeholder="Type your message..."
             placeholderTextColor="#999"
             value={input}
-            onChangeText={setInput}
+            onChangeText={handleInputChange}
           />
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
             <Text style={styles.sendText}>Send</Text>
@@ -384,6 +444,12 @@ const styles = StyleSheet.create({
   chatSubtitle: {
     color: theme.colors.muted,
     marginTop: theme.spacing.xs,
+  },
+  typingText: {
+    color: theme.colors.primary,
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: "600",
   },
   loadingContainer: {
     flex: 1,

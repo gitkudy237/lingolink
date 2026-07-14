@@ -76,6 +76,36 @@ export function offPresenceUpdate(cb: (data: any) => void) {
   socket.off("presence_updated", cb);
 }
 
+export async function onTyping(cb: (data: any) => void) {
+  const s = await connectSocket();
+  s.on("user_typing", cb);
+}
+
+export function offTyping(cb: (data: any) => void) {
+  if (!socket) return;
+  socket.off("user_typing", cb);
+}
+
+export async function onStopTyping(cb: (data: any) => void) {
+  const s = await connectSocket();
+  s.on("user_stopped_typing", cb);
+}
+
+export function offStopTyping(cb: (data: any) => void) {
+  if (!socket) return;
+  socket.off("user_stopped_typing", cb);
+}
+
+export async function emitTyping(conversationId: string) {
+  const s = await connectSocket();
+  s.emit("typing", { conversationId });
+}
+
+export async function emitStopTyping(conversationId: string) {
+  const s = await connectSocket();
+  s.emit("stop_typing", { conversationId });
+}
+
 export default {
   connectSocket,
   disconnectSocket,
@@ -86,4 +116,10 @@ export default {
   offMessage,
   onPresenceUpdate,
   offPresenceUpdate,
+  onTyping,
+  offTyping,
+  onStopTyping,
+  offStopTyping,
+  emitTyping,
+  emitStopTyping,
 };
