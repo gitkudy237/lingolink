@@ -10,7 +10,13 @@ const getSocketUrl = () => {
 };
 
 export async function connectSocket() {
-  if (socket && socket.connected) return socket;
+  if (socket) {
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    return socket;
+  }
 
   const token = await SecureStore.getItemAsync("authToken");
   if (!token) {
@@ -32,7 +38,6 @@ export async function connectSocket() {
 export function disconnectSocket() {
   if (socket) {
     socket.disconnect();
-    socket = null;
   }
 }
 
@@ -61,6 +66,16 @@ export function offMessage(cb: (data: any) => void) {
   socket.off("message", cb);
 }
 
+export async function onPresenceUpdate(cb: (data: any) => void) {
+  const s = await connectSocket();
+  s.on("presence_updated", cb);
+}
+
+export function offPresenceUpdate(cb: (data: any) => void) {
+  if (!socket) return;
+  socket.off("presence_updated", cb);
+}
+
 export default {
   connectSocket,
   disconnectSocket,
@@ -69,4 +84,6 @@ export default {
   sendMessage,
   onMessage,
   offMessage,
+  onPresenceUpdate,
+  offPresenceUpdate,
 };

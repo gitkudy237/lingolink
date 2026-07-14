@@ -86,6 +86,22 @@ export const fetchMessages = async (conversationId: string, limit = 50) => {
   }
 };
 
+export const fetchConversationDetails = async (conversationId: string) => {
+  try {
+    const token = await SecureStore.getItemAsync("authToken");
+    if (!token) throw new Error("No auth token found");
+
+    const response = await axios.get(`${API_BASE_URL}/conversations/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return response.data.conversation;
+  } catch (error: any) {
+    console.error("Fetch conversation details error:", error);
+    throw error.response?.data || { message: "Failed to fetch conversation details" };
+  }
+};
+
 export const sendMessageRest = async (conversationId: string, payload: any) => {
   try {
     const token = await SecureStore.getItemAsync("authToken");

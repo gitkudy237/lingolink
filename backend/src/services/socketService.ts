@@ -3,6 +3,7 @@ import { verifyJwt } from "../utils/jwt";
 import { findConversationParticipant, findConversationByIdWithParticipants } from "../models/conversationModel";
 import { markConversationRead, sendMessage as persistMessage } from "./messageService";
 import { Prisma } from "@prisma/client";
+import { markUserOffline, markUserOnline } from "./presenceService";
 
 interface SocketUser {
   id: string;
@@ -37,6 +38,10 @@ export function setupSocketIO(io: SocketIOServer) {
     }
 
     console.log(`User ${socket.user.id} connected`);
+    io.emit("presence_updated", {
+      userId: socket.user.id,
+      ...markUserOnline(socket.user.id),
+    });
 
     socket.on("join_conversation", async (conversationId: string) => {
       try {
@@ -165,6 +170,12 @@ export function setupSocketIO(io: SocketIOServer) {
 
     socket.on("disconnect", () => {
       console.log(`User ${socket.user?.id} disconnected`);
+      if (socket.user) {
+        io.emit("presence_updated", {
+          userId: socket.user.id,
+          ...markUserOffline(socket.user.id),
+        });
+      }
     });
   });
 }

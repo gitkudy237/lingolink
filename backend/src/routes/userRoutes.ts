@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { findAllUsers, findUserById, updateUser } from "../models/userModel";
+import { getUserPresence } from "../services/presenceService";
 
 const router = Router();
 
@@ -16,6 +17,16 @@ router.get("/me", authMiddleware, async (req, res) => {
     }
 
     res.status(200).json({ user });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/:id/presence", authMiddleware, async (req, res) => {
+  try {
+    const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const presence = getUserPresence(userId);
+    res.status(200).json({ presence });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

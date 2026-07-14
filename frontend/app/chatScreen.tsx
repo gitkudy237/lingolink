@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -15,18 +15,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
 import {
+  fetchConversationDetails,
   fetchMessages,
   markConversationRead,
   sendMessageRest,
 } from "../src/services/conversationService";
 import {
   connectSocket,
-  disconnectSocket,
   joinConversation,
   leaveConversation,
   onMessage,
   offMessage,
+  onPresenceUpdate,
+  offPresenceUpdate,
 } from "../src/services/socket";
+import { fetchUserPresence } from "../src/services/userService";
 
 interface Message {
   id: string;
@@ -56,6 +59,11 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState(parsedUser?.name || parsedUser?.username || "LingoLink");
+  const [chatStatus, setChatStatus] = useState("Loading status...");
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
+  const otherUserIdRef = useRef<string | null>(null);
 
   const storageKey = useMemo(
     () => (conversationIdValue ? `messages-${conversationIdValue}` : "messages-unknown"),
@@ -72,7 +80,44 @@ export default function ChatScreen() {
         setLoading(true);
         const storedCurrentUser = await SecureStore.getItemAsync("currentUser");
         if (storedCurrentUser) {
-          setCurrentUser(JSON.parse(storedCurrentUser));
+          const parsedCurrentUser = JSON.parse(storedCurrentUser);
+          setCurrentUser(parsedCurrentUser);
+          currentUserIdRef.current = parsedCurrentUser.id;
+        }
+
+        const conversation = await fetchConversationDetails(conversationIdValue);
+        const currentUserId = currentUserIdRef.current;
+        const directParticipant = conversation?.participants?.find(
+          (participant: any) => participant.user?.id !== currentUserId
+        );
+        const participantName = directParticipant?.user?.username;
+
+        if (conversation?.type === "group") {
+          setChatTitle(conversation.title || "Group Chat");
+          setChatStatus(`${conversation.participants?.length || 0} members`);
+        } else if (directParticipant?.user) {
+          setOtherUserId(directParticipant.user.id);
+          otherUserIdRef.current = directParticipant.user.id;
+          setChatTitle(participantName || parsedUser?.name || parsedUser?.username || "LingoLink");
+
+          try {
+            const presence = await fetchUserPresence(directParticipant.user.id);
+            setChatStatus(
+              presence.online
+                ? "Online"
+                : presence.lastSeenAt
+                  ? `Last seen at ${new Date(presence.lastSeenAt).toLocaleString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      month: "short",
+                      day: "numeric",
+                    })}`
+                  : "Offline"
+            );
+          } catch (presenceError) {
+            console.log("PRESENCE LOAD ERROR", presenceError);
+            setChatStatus("Offline");
+          }
         }
 
         const storedMessages = await SecureStore.getItemAsync(storageKey);
@@ -91,7 +136,7 @@ export default function ChatScreen() {
           type: message.type,
           originalText: message.originalText,
           createdAt: message.createdAt,
-          sender: currentUser?.id === message.senderId ? "me" : "them",
+          sender: currentUserIdRef.current === message.senderId ? "me" : "them",
         } as Message));
 
         setMessages(normalized);
@@ -130,7 +175,7 @@ export default function ChatScreen() {
           type: payload.type,
           originalText: payload.originalText,
           createdAt: payload.createdAt,
-          sender: currentUser?.id === payload.senderId ? "me" : "them",
+          sender: currentUserIdRef.current === payload.senderId ? "me" : "them",
         };
 
         const nextMessages = [...previous, nextMessage];
@@ -145,11 +190,29 @@ export default function ChatScreen() {
       }
     };
 
+    const handlePresenceUpdate = (payload: any) => {
+      if (!otherUserIdRef.current || payload.userId !== otherUserIdRef.current) return;
+
+      setChatStatus(
+        payload.online
+          ? "Online"
+          : payload.lastSeenAt
+            ? `Last seen at ${new Date(payload.lastSeenAt).toLocaleString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                month: "short",
+                day: "numeric",
+              })}`
+            : "Offline"
+      );
+    };
+
     const initSocket = async () => {
       try {
         await connectSocket();
         await joinConversation(conversationIdValue);
         await onMessage(handleIncomingMessage);
+        await onPresenceUpdate(handlePresenceUpdate);
       } catch (err) {
         console.log("CHAT SOCKET ERROR", err);
       }
@@ -159,10 +222,10 @@ export default function ChatScreen() {
 
     return () => {
       offMessage(handleIncomingMessage);
+      offPresenceUpdate(handlePresenceUpdate);
       leaveConversation(conversationIdValue);
-      disconnectSocket();
     };
-  }, [conversationIdValue, currentUser?.id, storageKey]);
+  }, [conversationIdValue, storageKey]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -227,12 +290,10 @@ export default function ChatScreen() {
 
         <View style={{ marginLeft: theme.spacing.md }}>
           <Text style={styles.chatTitle}>
-            {parsedUser?.name || parsedUser?.username || "LingoLink"}
+            {chatTitle}
           </Text>
           <Text style={styles.chatSubtitle} numberOfLines={1}>
-            {currentUser
-              ? `Signed in as ${currentUser.username}`
-              : "Your language chat"}
+            {chatStatus}
           </Text>
         </View>
       </View>
