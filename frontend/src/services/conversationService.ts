@@ -106,4 +106,24 @@ export const sendMessageRest = async (conversationId: string, payload: any) => {
   }
 };
 
+export const markConversationRead = async (conversationId: string) => {
+  try {
+    const token = await SecureStore.getItemAsync("authToken");
+    if (!token) throw new Error("No auth token found");
+
+    const response = await axios.post(
+      `${API_BASE_URL}/conversations/${conversationId}/messages/read`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Mark conversation read error:", error);
+    throw error.response?.data || { message: "Failed to mark conversation read" };
+  }
+};
+
 export default {};

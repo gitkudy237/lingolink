@@ -14,7 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
-import { fetchMessages, sendMessageRest } from "../src/services/conversationService";
+import {
+  fetchMessages,
+  markConversationRead,
+  sendMessageRest,
+} from "../src/services/conversationService";
 import {
   connectSocket,
   disconnectSocket,
@@ -92,6 +96,7 @@ export default function ChatScreen() {
 
         setMessages(normalized);
         await SecureStore.setItemAsync(storageKey, JSON.stringify(normalized));
+        await markConversationRead(conversationIdValue);
       } catch (err: any) {
         console.log("CHAT LOAD ERROR", err);
         if (mounted) setError(err.message || "Unable to load messages.");
@@ -132,6 +137,12 @@ export default function ChatScreen() {
         SecureStore.setItemAsync(storageKey, JSON.stringify(nextMessages));
         return nextMessages;
       });
+
+      if (currentUser?.id !== payload.senderId) {
+        markConversationRead(conversationIdValue).catch((err) => {
+          console.log("MARK READ ERROR", err);
+        });
+      }
     };
 
     const initSocket = async () => {
