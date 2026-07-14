@@ -9,7 +9,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,32 +21,11 @@ const LoginScreen = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({ email: "", password: "" });
+  const [errorMessage, setErrorMessage] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  const validateEmail = (text: string) => {
-    if (!text.trim()) return "Email is required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return "Invalid email";
-    return "";
-  };
-
-  const validatePassword = (text: string) => {
-    if (!text.trim()) return "Password is required";
-    if (text.includes(".")) return "Dots (.) not allowed";
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(text)) {
-      return "Must contain uppercase, lowercase, number & special character";
-    }
-    return "";
-  };
-
   const handleLogin = async () => {
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
-
-    setErrors({ email: emailError, password: passwordError });
-    if (emailError || passwordError) return;
+    setErrorMessage("");
 
     try {
       const payload: AuthLoginRequest = { email, password };
@@ -59,10 +37,7 @@ const LoginScreen = () => {
       router.replace("/chatList");
     } catch (error: any) {
       console.log("LOGIN ERROR:", error);
-      setErrors((prev) => ({
-        ...prev,
-        password: error?.response?.data?.error || "Invalid credentials",
-      }));
+      setErrorMessage("Invalide email or password");
     }
   };
 
@@ -89,9 +64,8 @@ const LoginScreen = () => {
             value={email}
             onChange={(text: string) => {
               setEmail(text);
-              setErrors((prev) => ({ ...prev, email: validateEmail(text) }));
+              setErrorMessage("");
             }}
-            error={errors.email}
             keyboardType="email-address"
           />
 
@@ -101,20 +75,22 @@ const LoginScreen = () => {
             value={password}
             onChange={(text: string) => {
               setPassword(text);
-              setErrors((prev) => ({ ...prev, password: validatePassword(text) }));
+              setErrorMessage("");
             }}
-            error={errors.password}
             secure={!isPasswordVisible}
+            rightIcon={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+            onRightIconPress={() => setIsPasswordVisible((visible) => !visible)}
           />
 
           <Button title="Log in" onPress={handleLogin} />
+
+          {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-          <TouchableOpacity onPress={() => router.push("/signup")}> 
-            <Text style={styles.link}>Sign up</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText} onPress={() => router.push("/signup")}> 
+            Don&apos;t have an account? <Text style={styles.link}>Sign up</Text>
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -188,7 +164,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   footer: {
-    flexDirection: "row",
     justifyContent: "center",
     marginTop: 30,
     padding: 20,
@@ -202,5 +177,12 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 12,
     marginTop: 4,
+  },
+  errorMessage: {
+    marginTop: 12,
+    color: theme.colors.danger,
+    fontSize: 13,
+    textAlign: "center",
+    fontWeight: "600",
   },
 });

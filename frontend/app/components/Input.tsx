@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../src/theme";
 
@@ -11,6 +11,8 @@ type Props = {
   error?: string;
   secure?: boolean;
   keyboardType?: any;
+  rightIcon?: keyof typeof Ionicons.glyphMap;
+  onRightIconPress?: () => void;
 };
 
 const Input: React.FC<Props> = ({
@@ -21,6 +23,8 @@ const Input: React.FC<Props> = ({
   error,
   secure,
   keyboardType,
+  rightIcon,
+  onRightIconPress,
 }) => {
   return (
     <View style={{ marginBottom: theme.spacing.sm }}>
@@ -35,6 +39,11 @@ const Input: React.FC<Props> = ({
           onChangeText={onChange}
           keyboardType={keyboardType}
         />
+        {rightIcon ? (
+          <TouchableOpacity onPress={onRightIconPress} hitSlop={10}>
+            <Ionicons name={rightIcon} size={20} color={theme.colors.muted} />
+          </TouchableOpacity>
+        ) : null}
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
