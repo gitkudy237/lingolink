@@ -53,6 +53,8 @@ type MessageGroup = {
   messages: Message[];
 };
 
+type ParticipantNameMap = Record<string, string>;
+
 export default function ChatScreen() {
   const { conversationId, user } = useLocalSearchParams();
   const router = useRouter();
@@ -72,6 +74,8 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [chatTitle, setChatTitle] = useState(parsedUser?.name || parsedUser?.username || "LingoLink");
   const [presenceStatus, setPresenceStatus] = useState("Loading status...");
+  const [conversationType, setConversationType] = useState<"direct" | "group" | null>(null);
+  const [participantNames, setParticipantNames] = useState<ParticipantNameMap>({});
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const currentUserIdRef = useRef<string | null>(null);
@@ -99,6 +103,20 @@ export default function ChatScreen() {
         }
 
         const conversation = await fetchConversationDetails(conversationIdValue);
+        setConversationType(conversation?.type || null);
+
+        if (conversation?.participants?.length) {
+          const names = conversation.participants.reduce((acc: ParticipantNameMap, participant: any) => {
+            if (participant?.user?.id && participant?.user?.username) {
+              acc[participant.user.id] = participant.user.username;
+            }
+
+            return acc;
+          }, {});
+
+          setParticipantNames(names);
+        }
+
         const currentUserId = currentUserIdRef.current;
         const directParticipant = conversation?.participants?.find(
           (participant: any) => participant.user?.id !== currentUserId
@@ -446,6 +464,12 @@ export default function ChatScreen() {
                         message.sender === "me" ? styles.myBubble : styles.theirBubble,
                       ]}
                     >
+                      {conversationType === "group" && message.sender !== "me" ? (
+                        <Text style={styles.messageSender}>
+                          {participantNames[message.senderId] || message.senderEmail || "Member"}
+                        </Text>
+                      ) : null}
+
                       <Text
                         style={[
                           styles.messageText,
@@ -584,6 +608,12 @@ const styles = StyleSheet.create({
   messageText: {
     color: theme.colors.text,
     fontSize: 14,
+  },
+  messageSender: {
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.primary,
+    fontSize: 11,
+    fontWeight: "700",
   },
   messageTime: {
     marginTop: theme.spacing.sm,

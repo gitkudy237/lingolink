@@ -1,10 +1,23 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+*.log
+logs/
+*.swp
 
-# dependencies
+# --- Node / Dependencies ---
+# Ignore node_modules for the server and any other JS folder
 node_modules/
+dist/
+server/dist/
+build/
 
-# Expo
-.expo/
+# --- Environment Secrets (CRITICAL) ---
+# Never commit your database passwords or JWT secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+expo/
 dist/
 web-build/
 expo-env.d.ts
@@ -42,3 +55,24 @@ app-example
 # generated native folders
 /ios
 /android
+
+# --- Translation service (FastAPI + NLLB) ---
+/translation/.venv/
+/translation/venv/
+/translation/__pycache__/
+/translation/**/*.py[cod]
+/translation/.pytest_cache/
+/translation/.mypy_cache/
+/translation/.ruff_cache/
+/translation/.coverage
+/translation/htmlcov/
+/translation/.env
+/translation/.env.*
+/translation/.cache/
+/translation/.huggingface/
+/translation/models/
+/translation/*.bin
+/translation/*.safetensors
+/translation/*.onnx
+
+IMPLEMENTATION_SPEC.md

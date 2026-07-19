@@ -14,7 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../src/theme";
-import { createDirectConversation, fetchUsers } from "../src/services/conversationService";
+import {
+  createDirectConversation,
+  createGroupConversation,
+  fetchUsers,
+} from "../src/services/conversationService";
 import { fetchUserPresence } from "../src/services/userService";
 import { onPresenceUpdate, offPresenceUpdate } from "../src/services/socket";
 import DefaultAvatar from "./components/DefaultAvatar";
@@ -29,11 +33,15 @@ type User = {
   online?: boolean;
 };
 
+type ChatMode = "direct" | "group";
+
 export default function NewChat() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+  const [chatMode, setChatMode] = useState<ChatMode>("direct");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
@@ -100,7 +108,20 @@ export default function NewChat() {
     );
   });
 
+  const selectedUsers = users.filter((user) => selectedUserIds.includes(user.id));
+  const groupTitle = selectedUsers.map((user) => user.username).join(", ");
+  const canCreateGroup = selectedUsers.length >= 2;
+
   const handleSelectUser = async (user: User) => {
+    if (chatMode === "group") {
+      setSelectedUserIds((previous) =>
+        previous.includes(user.id)
+          ? previous.filter((userId) => userId !== user.id)
+          : [...previous, user.id]
+      );
+      return;
+    }
+
     setCreatingConversation(user.id);
     setError(null);
 
@@ -125,6 +146,33 @@ export default function NewChat() {
     }
   };
 
+  const handleCreateGroup = async () => {
+    if (!canCreateGroup) return;
+
+    setCreatingConversation("group");
+    setError(null);
+
+    try {
+      const conversation = await createGroupConversation(groupTitle, selectedUserIds);
+      router.push({
+        pathname: "/chatScreen",
+        params: {
+          conversationId: conversation.id,
+          user: JSON.stringify({
+            id: conversation.id,
+            name: conversation.title || "Group Chat",
+            username: conversation.title || "Group Chat",
+          }),
+        },
+      } as any);
+    } catch (err: any) {
+      console.log("NEW GROUP CREATE ERROR", err);
+      setError(err.message || "Unable to create group conversation.");
+    } finally {
+      setCreatingConversation(null);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -133,6 +181,46 @@ export default function NewChat() {
         </TouchableOpacity>
         <Text style={styles.title}>New Chat</Text>
       </View>
+
+      <View style={styles.modeSwitcher}>
+        {(["direct", "group"] as ChatMode[]).map((mode) => (
+          <TouchableOpacity
+            key={mode}
+            style={[styles.modeChip, chatMode === mode && styles.modeChipActive]}
+            onPress={() => {
+              setChatMode(mode);
+              setError(null);
+              setSelectedUserIds([]);
+            }}
+          >
+            <Text style={[styles.modeChipText, chatMode === mode && styles.modeChipTextActive]}>
+              {mode === "direct" ? "Direct" : "Group"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {chatMode === "group" ? (
+        <View style={styles.groupSummary}>
+          <Text style={styles.groupSummaryTitle}>
+            {selectedUsers.length > 0 ? `${selectedUsers.length} selected` : "Pick at least 2 people"}
+          </Text>
+          <Text style={styles.groupSummaryText} numberOfLines={1}>
+            {groupTitle || "Selected members will form the group title"}
+          </Text>
+          <TouchableOpacity
+            style={[styles.groupButton, !canCreateGroup && styles.groupButtonDisabled]}
+            onPress={handleCreateGroup}
+            disabled={!canCreateGroup || creatingConversation === "group"}
+          >
+            {creatingConversation === "group" ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.groupButtonText}>Create Group</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <View style={styles.searchBox}>
         <Ionicons name="search" size={18} color={theme.colors.muted} />
@@ -168,7 +256,7 @@ export default function NewChat() {
             <TouchableOpacity
               style={styles.card}
               onPress={() => handleSelectUser(item)}
-              disabled={creatingConversation === item.id}
+              disabled={creatingConversation === item.id || creatingConversation === "group"}
             >
               <View style={styles.userInfo}>
                 <View style={styles.avatarStack}>
@@ -178,6 +266,11 @@ export default function NewChat() {
                     <DefaultAvatar name={item.username} size={48} />
                   )}
                   {item.online ? <View style={styles.onlineDot} /> : null}
+                  {chatMode === "group" && selectedUserIds.includes(item.id) ? (
+                    <View style={styles.selectedDot}>
+                      <Ionicons name="checkmark" size={12} color="#fff" />
+                    </View>
+                  ) : null}
                 </View>
                 <View style={styles.meta}>
                   <Text style={styles.username}>{item.username}</Text>
@@ -213,6 +306,58 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: theme.colors.text,
+  },
+  modeSwitcher: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  modeChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
+    backgroundColor: "rgba(15, 118, 110, 0.08)",
+  },
+  modeChipActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  modeChipText: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  modeChipTextActive: {
+    color: "#fff",
+  },
+  groupSummary: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.surface,
+  },
+  groupSummaryTitle: {
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  groupSummaryText: {
+    color: theme.colors.muted,
+    marginTop: 4,
+  },
+  groupButton: {
+    marginTop: theme.spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.lg,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+  },
+  groupButtonDisabled: {
+    opacity: 0.5,
+  },
+  groupButtonText: {
+    color: "#fff",
+    fontWeight: "700",
   },
   searchBox: {
     flexDirection: "row",
@@ -279,6 +424,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: -1,
     bottom: -1,
+    borderWidth: 2,
+    borderColor: theme.colors.surface,
+  },
+  selectedDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.primary,
+    position: "absolute",
+    right: -2,
+    top: -2,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: theme.colors.surface,
   },

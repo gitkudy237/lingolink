@@ -67,6 +67,30 @@ export const createDirectConversation = async (otherUserId: string) => {
   }
 };
 
+export const createGroupConversation = async (title: string, participantIds: string[]) => {
+  try {
+    const token = await SecureStore.getItemAsync("authToken");
+    if (!token) {
+      throw new Error("No auth token found");
+    }
+
+    const response = await axios.post(
+      `${API_BASE_URL}/conversations`,
+      { type: "group", title, participantIds },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data.conversation;
+  } catch (error: any) {
+    console.error("Create group conversation error:", error);
+    throw error.response?.data || { message: "Failed to create group conversation" };
+  }
+};
+
 export const fetchMessages = async (conversationId: string, limit = 50) => {
   try {
     const token = await SecureStore.getItemAsync("authToken");
